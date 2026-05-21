@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Background -->
+  <rect width="192" height="192" rx="36" fill="#f59e0b"/>
+
+  <!-- Bear ears -->
+  <circle cx="52" cy="44" r="22" fill="#1a1a1a"/>
+  <circle cx="140" cy="44" r="22" fill="#1a1a1a"/>
+  <circle cx="52" cy="44" r="13" fill="#f59e0b"/>
+  <circle cx="140" cy="44" r="13" fill="#f59e0b"/>
+
+  <!-- Bear head -->
+  <ellipse cx="96" cy="100" rx="58" ry="52" fill="#1a1a1a"/>
+
+  <!-- Bear face -->
+  <ellipse cx="96" cy="112" rx="30" ry="22" fill="#2a2a2a"/>
+
+  <!-- Eyes -->
+  <circle cx="78" cy="90" r="7" fill="white"/>
+  <circle cx="114" cy="90" r="7" fill="white"/>
+  <circle cx="80" cy="89" r="3.5" fill="#111"/>
+  <circle cx="116" cy="89" r="3.5" fill="#111"/>
+  <circle cx="81" cy="88" r="1.2" fill="white"/>
+  <circle cx="117" cy="88" r="1.2" fill="white"/>
+
+  <!-- Nose -->
+  <ellipse cx="96" cy="107" rx="9" ry="6" fill="#f59e0b"/>
+
+  <!-- Mouth -->
+  <path d="M88 115 Q96 122 104 115" stroke="#f59e0b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+  <!-- "BB" text below -->
+  <text x="96" y="168" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="28" fill="#1a1a1a" text-anchor="middle" letter-spacing="4">BB</text>
+</svg>
