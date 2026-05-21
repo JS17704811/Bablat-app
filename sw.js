@@ -1,4 +1,4 @@
-const CACHE = 'bablat-v1';
+const CACHE = 'bablat-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'];
 
