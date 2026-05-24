@@ -1,5 +1,5 @@
 // BABLAT Service Worker — Network-first para HTML, cache-first para assets estáticos
-const CACHE = 'bablat-v3';
+const CACHE = 'bablat-v4';
 const STATIC = [
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'
 ];

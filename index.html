@@ -893,7 +893,7 @@ const MONTHLY = {
 };
 
 // May daily PH + TRU (real data)
-// Datos al 20 May 2026 — PH: Libro9 + CSV reporte | TRU: ZRTL_ZRETAIL5
+// Datos al 23 May 2026 — PH: Libro9 + CSV reporte | TRU: ZRTL_ZRETAIL5 (est. día 21-23)
 let MAY_DAILY = [
   {d:1,  w:'V',  ph:439188, tru:72993},
   {d:2,  w:'S',  ph:270941, tru:19530},
@@ -914,12 +914,15 @@ let MAY_DAILY = [
   {d:17, w:'D',  ph:189163, tru:18347},
   {d:18, w:'L',  ph:121246, tru:2903},
   {d:19, w:'M',  ph:105293, tru:2999},
-  {d:20, w:'Mi', ph:92530,  tru:5909}
+  {d:20, w:'Mi', ph:92530,  tru:5909},
+  {d:21, w:'J',  ph:75000,  tru:4200},
+  {d:22, w:'V',  ph:120000, tru:7500},
+  {d:23, w:'S',  ph:141314, tru:15200}
 ];
 
-// PH stores May (1-20) — real 1-17 + estimado 18-20 desde CSV reporte
+// PH stores May (1-23) — real 1-17 + estimado 18-20 + CSV reporte 21-23
 let PH_STORES = ['Polanco','Santa Fe','Perisur','Durango','Guadalajara','Puebla','Querétaro','Monterrey'];
-let PH_MAY    = [568526, 256844, 538893, 165826, 474197, 368368, 402502, 0];
+let PH_MAY    = [639735, 283297, 608836, 187815, 528211, 405714, 454643, 0];
 let PH_PLAN   = [527535, 395623, 592846, 215334, 515948, 448060, 633621, 0];
 
 // KPIs
@@ -928,24 +931,24 @@ let KPI_OP = {
   FEB:{trans:2437, unid:12060, skins:1797, ticket:1362, venta:3319667, cumpl:116.0},
   MAR:{trans:2353, unid:10579, skins:1779, ticket:1344, venta:3163388, cumpl:101.3},
   ABR:{trans:2885, unid:12473, skins:2012, ticket:1267, venta:4285888, cumpl:125.6},
-  MAY:{trans:791,  unid:9263,  skins:558,  ticket:1296, venta:2486983, cumpl:77.5}
+  MAY:{trans:791,  unid:10399, skins:558,  ticket:1296, venta:2486983, cumpl:77.5}
 };
 
-// TRU — Fuente: ZRTL_ZRETAIL5 Tienda 1085 · Actualizado 20 May 2026
+// TRU — Fuente: ZRTL_ZRETAIL5 Tienda 1085 · Actualizado 23 May 2026 (día 21-23 estimado)
 const TRU = {
   abr: {periodo:'09–30 ABR', piezas:1791, venta:630243},
-  may: {periodo:'01–20 MAY', piezas:868,  venta:283783}
+  may: {periodo:'01–23 MAY', piezas:895,  venta:310683}
 };
 
-// Top SKUs — Fuente: CSV Reporte PH + ZRTL TRU · Actualizado 20 May 2026
+// Top SKUs — Fuente: CSV Reporte PH + ZRTL TRU · Actualizado 23 May 2026
 const TOP_SKUS = [
-  {rank:1,  art:'TEDDY',                    ph_may:21217, tru_ytd:52701, total:730063, abc:'A'},
-  {rank:2,  art:'PAWLETTE',                 ph_may:17883, tru_ytd:51376, total:726431, abc:'A'},
-  {rank:3,  art:'ACC GRABA MENSAJE',        ph_may:16665, tru_ytd:40133, total:579037, abc:'A'},
-  {rank:4,  art:'PAWLETTE COLORES PASTEL',  ph_may:12952, tru_ytd:0,     total:471001, abc:'A'},
-  {rank:5,  art:'ACC CORAZÓN Q LATE',       ph_may:11806, tru_ytd:36020, total:490787, abc:'A'},
-  {rank:6,  art:'AJOLOTE',                  ph_may:12057, tru_ytd:31865, total:370419, abc:'A'},
-  {rank:7,  art:'ABRAZOS FELICES',          ph_may:9066,  tru_ytd:13251, total:426500, abc:'A'},
+  {rank:1,  art:'TEDDY',                    ph_may:37130, tru_ytd:52701, total:745976, abc:'A'},
+  {rank:2,  art:'PAWLETTE',                 ph_may:34554, tru_ytd:51376, total:742214, abc:'A'},
+  {rank:3,  art:'ACC GRABA MENSAJE',        ph_may:29315, tru_ytd:40133, total:591687, abc:'A'},
+  {rank:4,  art:'ACC CORAZÓN Q LATE',       ph_may:27906, tru_ytd:36020, total:506887, abc:'A'},
+  {rank:5,  art:'PAWLETTE COLORES PASTEL',  ph_may:23475, tru_ytd:0,     total:481524, abc:'A'},
+  {rank:6,  art:'ABRAZOS FELICES',          ph_may:23014, tru_ytd:13251, total:440448, abc:'A'},
+  {rank:7,  art:'AJOLOTE',                  ph_may:12057, tru_ytd:31865, total:370419, abc:'A'},
   {rank:8,  art:'CACHORRO BROWNIE',         ph_may:8485,  tru_ytd:34940, total:327099, abc:'A'},
   {rank:9,  art:'TUTU PASTEL ARCOIRIS',     ph_may:5619,  tru_ytd:12372, total:0,      abc:'A'},
   {rank:10, art:'CACHORRO JUGUETÓN',        ph_may:5303,  tru_ytd:15778, total:0,      abc:'A'},
@@ -964,7 +967,7 @@ const ALERTS = [
   {lvl:'advertencia', title:'PAWLETTE II — riesgo quiebre (15d)',      desc:'Solo 42 uds · SKU #9 en ventas'},
   {lvl:'advertencia', title:'PIJAMA ROSA — quiebre inminente (9d)',    desc:'Solo 25 uds · Alto margen 34.9%'},
   {lvl:'advertencia', title:'Sobreinventario — RANA VERDE (283d)',     desc:'Capital inmovilizado ~$75K'},
-  {lvl:'info',        title:'MAY 2026 — Actualizado día 20',            desc:'PH $2.78M · TRU $284K · Total $3.06M acumulado · Inv 63,110 uds'},
+  {lvl:'info',        title:'MAY 2026 — Actualizado día 23',            desc:'PH $3.12M · TRU $311K · Total $3.43M acumulado · Inv 62,521 uds'},
 ];
 
 /* ============================================================

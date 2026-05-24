@@ -1,0 +1,2096 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BABLAT · Sistema de Análisis IA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sb-bg:#111827;--sb-hover:#1f2937;--sb-active:#1f2937;
+  --sb-text:#9ca3af;--sb-text-active:#f9fafb;--sb-label:#4b5563;--sb-border:#374151;
+  --bab-orange:#f59e0b;--blue:#3b82f6;--green:#10b981;--red:#ef4444;
+  --orange-warn:#f59e0b;--purple:#8b5cf6;--bg:#f9fafb;--card:#ffffff;
+  --border:#e5e7eb;--text:#111827;--muted:#6b7280;--radius:8px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.05);
+  --shadow:0 1px 3px rgba(0,0,0,0.1),0 1px 2px rgba(0,0,0,0.06);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;font-size:13px}
+
+/* SIDEBAR */
+#sidebar{width:220px;min-width:220px;background:var(--sb-bg);display:flex;flex-direction:column;height:100vh;overflow-y:auto;border-right:1px solid var(--sb-border)}
+.sb-logo{padding:16px 14px 14px;border-bottom:1px solid var(--sb-border)}
+.sb-logo-inner{display:flex;align-items:center;gap:10px}
+.sb-bb{background:var(--bab-orange);color:#000;font-weight:900;font-size:15px;width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-brand{display:flex;flex-direction:column}
+.sb-brand-top{color:#fff;font-weight:700;font-size:11px;letter-spacing:.5px}
+.sb-brand-sub{color:var(--sb-text);font-size:9px;line-height:1.4;margin-top:1px}
+.sb-section{padding:10px 10px 4px;font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--sb-label);text-transform:uppercase;margin-top:4px}
+.nav-link{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;color:var(--sb-text);border-radius:6px;margin:1px 6px;font-size:12px;transition:all .15s;position:relative;text-decoration:none}
+.nav-link:hover{background:var(--sb-hover);color:var(--sb-text-active)}
+.nav-link.active{background:var(--sb-active);color:var(--sb-text-active)}
+.nav-link.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:var(--bab-orange);border-radius:0 3px 3px 0}
+.nav-icon{font-size:14px;width:18px;text-align:center}
+.nav-badge{margin-left:auto;background:#ef4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;font-weight:700}
+.nav-badge.warn{background:#f59e0b}
+.sb-bottom{margin-top:auto;padding:12px;border-top:1px solid var(--sb-border)}
+.sb-user{display:flex;align-items:center;gap:8px}
+.sb-avatar{width:32px;height:32px;background:#374151;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px;flex-shrink:0}
+.sb-user-info{display:flex;flex-direction:column}
+.sb-user-name{color:var(--sb-text-active);font-size:11px;font-weight:600}
+.sb-user-role{color:var(--sb-text);font-size:10px}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tb-title{font-weight:700;font-size:15px;color:var(--text)}
+.tb-center{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.tb-pulse{display:flex;align-items:center;gap:5px;color:var(--green);font-weight:600}
+.tb-pulse-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tb-right{font-size:12px;color:var(--muted)}
+#content{flex:1;overflow-y:auto;padding:20px}
+
+/* VIEWS */
+.view{display:none}
+.view.active{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-weight:700;font-size:13px;color:var(--text)}
+.card-body{padding:14px 16px}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.kpi-value{font-size:22px;font-weight:800;color:var(--text);line-height:1}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:5px}
+.kpi-delta{font-size:11px;font-weight:600}
+.kpi-delta.up{color:var(--green)}
+.kpi-delta.down{color:var(--red)}
+.kpi-delta.warn{color:var(--orange-warn)}
+
+/* TWO COLS */
+.two-col{display:grid;grid-template-columns:60% 40%;gap:14px}
+.two-col-half{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.col-stack{display:flex;flex-direction:column;gap:14px}
+
+/* CHARTS */
+.chart-wrap{position:relative}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-bottom:2px solid var(--border);text-align:left;background:#f9fafb}
+td{padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+tr:hover td{background:#f9fafb}
+tr:last-child td{border-bottom:none}
+.td-num{text-align:right;font-variant-numeric:tabular-nums;font-family:monospace}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700}
+.badge-red{background:#fee2e2;color:#dc2626}
+.badge-yellow{background:#fef3c7;color:#d97706}
+.badge-green{background:#d1fae5;color:#059669}
+.badge-blue{background:#dbeafe;color:#2563eb}
+.badge-gray{background:#f3f4f6;color:#6b7280}
+
+/* BAR ROWS */
+.bar-row{display:flex;align-items:center;gap:8px;padding:5px 0}
+.bar-label{width:110px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.bar-outer{flex:1;background:#f3f4f6;border-radius:4px;height:14px;overflow:hidden}
+.bar-inner{height:100%;border-radius:4px;transition:width .3s}
+.bar-val{width:80px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums;flex-shrink:0}
+.bar-delta{width:70px;text-align:right;font-size:11px;flex-shrink:0}
+
+/* TOGGLE BUTTONS */
+.btn-group{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.btn-tog{padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;background:#fff;border:none;color:var(--muted);transition:all .15s}
+.btn-tog.active{background:var(--text);color:#fff}
+
+/* ALERT CARDS */
+.alert-card{border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start}
+.alert-card.critica{border-left:3px solid var(--red)}
+.alert-card.advertencia{border-left:3px solid var(--orange-warn)}
+.alert-card.info{border-left:3px solid var(--blue)}
+.alert-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.alert-body{flex:1}
+.alert-title{font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px}
+.alert-desc{font-size:11px;color:var(--muted);line-height:1.4;margin-bottom:5px}
+.alert-footer{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.alert-action{margin-left:auto;padding:4px 10px;background:var(--text);color:#fff;border:none;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer}
+
+/* REC CARDS */
+.rec-card{border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px}
+.rec-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
+.rec-num{background:var(--bab-orange);color:#000;font-weight:900;font-size:12px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.rec-title{font-weight:700;font-size:12px;color:var(--text)}
+.rec-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-left:32px;margin-bottom:6px}
+.rec-tags{margin-left:32px;display:flex;gap:5px;flex-wrap:wrap}
+.impact-alto{color:#dc2626;font-weight:700;font-size:10px}
+.impact-medio{color:#d97706;font-weight:700;font-size:10px}
+
+/* CHAT */
+.chat-area{background:#f9fafb;border:1px solid var(--border);border-radius:var(--radius);height:340px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:12px;line-height:1.5}
+.msg-user{background:var(--text);color:#fff;align-self:flex-end;border-radius:12px 12px 2px 12px}
+.msg-ai{background:#fff;border:1px solid var(--border);color:var(--text);align-self:flex-start;border-radius:12px 12px 12px 2px}
+.msg-ai strong{color:var(--bab-orange)}
+.chat-input-row{display:flex;gap:8px;margin-top:10px}
+.chat-input{flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none;font-family:inherit}
+.chat-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.chat-send{padding:10px 18px;background:var(--bab-orange);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px}
+
+/* DROPZONE */
+.dropzone{border:2px dashed var(--border);border-radius:var(--radius);padding:40px;text-align:center;cursor:pointer;transition:all .2s}
+.dropzone:hover,.dropzone.drag{border-color:var(--blue);background:#eff6ff}
+.dropzone-icon{font-size:40px;margin-bottom:10px}
+.dropzone-text{font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px}
+.dropzone-sub{font-size:12px;color:var(--muted)}
+
+/* STORE CARDS */
+.store-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+.store-card{border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center}
+.store-card.red{border-top:3px solid var(--red)}
+.store-card.green{border-top:3px solid var(--green)}
+.store-card.yellow{border-top:3px solid var(--orange-warn)}
+.store-name{font-weight:700;font-size:12px;margin-bottom:6px}
+.store-pct{font-size:20px;font-weight:800}
+.store-pct.neg{color:var(--red)}
+.store-pct.pos{color:var(--green)}
+.store-detail{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* SELECTS / INPUTS */
+select,input[type=date]{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;color:var(--text);outline:none}
+select:focus,input[type=date]:focus{border-color:var(--blue)}
+
+/* FILTER BAR */
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.filter-label{font-size:11px;font-weight:700;color:var(--muted)}
+
+/* PROGRESS */
+.progress{background:#f3f4f6;border-radius:4px;height:8px;overflow:hidden}
+.progress-bar{height:100%;border-radius:4px}
+
+/* SEARCH */
+.search-box{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;width:220px;outline:none}
+.search-box:focus{border-color:var(--blue)}
+
+/* SPARKLINE SVG */
+.trend-up{color:var(--green)}
+.trend-down{color:var(--red)}
+.trend-stable{color:var(--muted)}
+
+/* ABC SUMMARY */
+.abc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+.abc-card{border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;text-align:center}
+.abc-letter{font-size:28px;font-weight:900;margin-bottom:6px}
+.abc-letter.a{color:var(--green)}.abc-letter.b{color:var(--blue)}.abc-letter.c{color:var(--muted)}
+
+/* MISC */
+.section-gap{margin-bottom:18px}
+.mt-10{margin-top:10px}
+.mt-14{margin-top:14px}
+.text-muted{color:var(--muted)}
+.text-green{color:var(--green)}
+.text-red{color:var(--red)}
+.text-orange{color:var(--bab-orange)}
+.fw-700{font-weight:700}
+.fs-11{font-size:11px}
+.divider{border:none;border-top:1px solid var(--border);margin:12px 0}
+.ver-todas{font-size:11px;color:var(--blue);cursor:pointer;text-decoration:underline}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:#f3f4f6;color:var(--muted);margin:1px}
+
+/* CUMPLIMIENTO CIRCLES */
+.cumpl-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.cumpl-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 10px;text-align:center;box-shadow:var(--shadow-sm)}
+.cumpl-mes{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.cumpl-circle{width:60px;height:60px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;border:3px solid}
+.cumpl-circle.ov{background:#d1fae5;color:#059669;border-color:#10b981}
+.cumpl-circle.pa{background:#fef3c7;color:#d97706;border-color:#f59e0b}
+.cumpl-circle.un{background:#fee2e2;color:#dc2626;border-color:#ef4444}
+.cumpl-real{font-size:11px;font-weight:600;color:var(--text)}
+.cumpl-plan{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* MONTH PERIOD SELECTOR BUTTONS */
+.period-sel{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.month-btn{padding:4px 12px;border-radius:16px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);transition:all .15s}
+.month-btn.on{background:var(--text);color:#fff;border-color:var(--text)}
+.month-btn:hover:not(.on){background:var(--bg)}
+.client-toggle{display:flex;gap:5px}
+.client-btn{padding:4px 12px;border-radius:16px;border:2px solid var(--border);background:#fff;cursor:pointer;font-size:11px;font-weight:700;transition:all .15s}
+.client-btn.ph.on{background:#0f3460;color:#fff;border-color:#0f3460}
+.client-btn.tru.on{background:#8b5cf6;color:#fff;border-color:#8b5cf6}
+.client-btn:hover:not(.on){background:var(--bg)}
+.filter-sep{width:1px;height:20px;background:var(--border);margin:0 2px}
+
+/* KPI OPERATIVOS BIG CARDS */
+.kpi-op-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.kpi-op-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 18px;box-shadow:var(--shadow);text-align:center;position:relative;overflow:hidden}
+.kpi-op-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
+.kpi-op-card.upt::before{background:linear-gradient(90deg,#3b82f6,#06b6d4)}
+.kpi-op-card.ticket::before{background:linear-gradient(90deg,#10b981,#34d399)}
+.kpi-op-card.att::before{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.kpi-op-icon{font-size:26px;margin-bottom:6px}
+.kpi-op-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
+.kpi-op-value{font-size:32px;font-weight:900;line-height:1}
+.kpi-op-value.upt{color:#3b82f6}
+.kpi-op-value.ticket{color:#10b981}
+.kpi-op-value.att{color:#8b5cf6}
+.kpi-op-sub{font-size:10px;color:var(--muted);margin-top:5px}
+.kpi-op-trend{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:7px;font-size:11px;font-weight:700}
+.trend-up{color:var(--green)}
+.trend-dn{color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-inner">
+      <div class="sb-bb">BB</div>
+      <div class="sb-brand">
+        <div class="sb-brand-top">BUILD-A-BEAR</div>
+        <div class="sb-brand-sub">BABLAT · MEXICO<br>SISTEMA DE ANÁLISIS IA</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-section">PRINCIPAL</div>
+  <a class="nav-link active" data-view="dashboard" onclick="nav('dashboard','Dashboard')">
+    <span class="nav-icon">🏠</span>Dashboard
+  </a>
+  <a class="nav-link" data-view="tendencia" onclick="nav('tendencia','Tendencia Mensual')">
+    <span class="nav-icon">📈</span>Tendencia Mensual
+  </a>
+  <a class="nav-link" data-view="reportes" onclick="nav('reportes','Reportes Mensuales')">
+    <span class="nav-icon">📋</span>Reportes Mensuales
+  </a>
+  <a class="nav-link" data-view="daily" onclick="nav('daily','Reporte Diario')">
+    <span class="nav-icon">📅</span>Reporte Diario
+  </a>
+  <a class="nav-link" data-view="weekly" onclick="nav('weekly','Reporte Semanal')">
+    <span class="nav-icon">📊</span>Reporte Semanal
+  </a>
+
+  <div class="sb-section">CANALES</div>
+  <a class="nav-link" data-view="ph" onclick="nav('ph','Palacio de Hierro')">
+    <span class="nav-icon">🏬</span>Palacio de Hierro
+  </a>
+  <a class="nav-link" data-view="tru" onclick="nav('tru','Toys R Us')">
+    <span class="nav-icon">🧸</span>Toys R Us
+  </a>
+
+  <div class="sb-section">ANÁLISIS</div>
+  <a class="nav-link" data-view="kpis" onclick="nav('kpis','KPIs Operativos')">
+    <span class="nav-icon">⚡</span>KPIs Operativos
+  </a>
+  <a class="nav-link" data-view="ia" onclick="nav('ia','Consulta con IA')">
+    <span class="nav-icon">🤖</span>Consulta con IA
+  </a>
+  <a class="nav-link" data-view="upload" onclick="nav('upload','Exportar / Cargar')">
+    <span class="nav-icon">⬇</span>Exportar
+  </a>
+  <a class="nav-link" data-view="inventarios" onclick="nav('inventarios','Inventarios')">
+    <span class="nav-icon">📦</span>Inventarios
+  </a>
+  <a class="nav-link" data-view="skus" onclick="nav('skus','SKUs')">
+    <span class="nav-icon">🏷</span>SKUs
+  </a>
+
+  <div class="sb-section">TIENDAS FOCUS</div>
+  <a class="nav-link" data-view="ph" onclick="nav('ph','Palacio de Hierro')">
+    <span class="nav-icon">🔴</span>Santa Fe <span style="color:#ef4444;margin-left:2px">⚠</span>
+    <span class="nav-badge">▼</span>
+  </a>
+  <a class="nav-link" data-view="ph" onclick="nav('ph','Palacio de Hierro')">
+    <span class="nav-icon">🟡</span>Perisur <span style="color:#f59e0b;margin-left:2px">⚠</span>
+    <span class="nav-badge warn">!</span>
+  </a>
+
+  <div class="sb-section">SISTEMA</div>
+  <a class="nav-link" data-view="alertas" onclick="nav('alertas','Centro de Alertas')">
+    <span class="nav-icon">🔔</span>Alertas <span class="nav-badge">8</span>
+  </a>
+  <a class="nav-link" data-view="upload" onclick="nav('upload','Cargar Datos')">
+    <span class="nav-icon">⬆</span>Cargar Datos
+  </a>
+  <a class="nav-link" onclick="alert('Configuración próximamente')">
+    <span class="nav-icon">⚙</span>Configuración
+  </a>
+
+  <div class="sb-bottom">
+    <div class="sb-user">
+      <div class="sb-avatar">GG</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name">Gerencia General</div>
+        <div class="sb-user-role">Administrador</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <div class="tb-title" id="page-title">Dashboard</div>
+    <div class="tb-center">
+      <span id="live-dt" style="font-weight:600;color:#111827"></span>
+      <span>·</span>
+      <span class="tb-pulse"><span class="tb-pulse-dot"></span>Pipeline activo</span>
+    </div>
+    <div class="tb-right">gg@bablat.mx</div>
+  </div>
+
+  <div id="content">
+
+    <!-- ======================== DASHBOARD ======================== -->
+    <div id="view-dashboard" class="view active">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Venta Ayer PH+TRU</div>
+          <div class="kpi-value">$201K</div>
+          <div class="kpi-sub">May 17: PH $189K + TRU $12K</div>
+          <div class="kpi-delta up">↑ 18.8% vs May 16</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Sell-Through YTD</div>
+          <div class="kpi-value">42%</div>
+          <div class="kpi-sub">52,650 uds vendidas / 122,240 total</div>
+          <div class="kpi-delta up">↑ 0.3pp vs semana ant.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Alertas Activas</div>
+          <div class="kpi-value" style="color:#ef4444">8</div>
+          <div class="kpi-sub">3 críticas · 5 advertencias</div>
+          <div class="kpi-delta down" style="cursor:pointer" onclick="nav('alertas','Centro de Alertas')">Ver alertas →</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">SKUs en Quiebre</div>
+          <div class="kpi-value" style="color:#ef4444">8</div>
+          <div class="kpi-sub">P1 agotados con demanda activa</div>
+          <div class="kpi-delta down">Venta perdida ~$15-20K/sem</div>
+        </div>
+      </div>
+
+      <!-- CUMPLIMIENTO CIRCLES -->
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Cumplimiento vs Plan por Mes</div>
+      <div class="cumpl-row">
+        <div class="cumpl-card">
+          <div class="cumpl-mes">ENE 2026</div>
+          <div class="cumpl-circle ov">116%</div>
+          <div class="cumpl-real">Real $5.82M</div>
+          <div class="cumpl-plan">Plan $5.02M</div>
+        </div>
+        <div class="cumpl-card">
+          <div class="cumpl-mes">FEB 2026</div>
+          <div class="cumpl-circle ov">116%</div>
+          <div class="cumpl-real">Real $3.32M</div>
+          <div class="cumpl-plan">Plan $2.86M</div>
+        </div>
+        <div class="cumpl-card">
+          <div class="cumpl-mes">MAR 2026</div>
+          <div class="cumpl-circle ov">101%</div>
+          <div class="cumpl-real">Real $3.16M</div>
+          <div class="cumpl-plan">Plan $3.12M</div>
+        </div>
+        <div class="cumpl-card">
+          <div class="cumpl-mes">ABR 2026</div>
+          <div class="cumpl-circle ov">126%</div>
+          <div class="cumpl-real">Real $4.29M</div>
+          <div class="cumpl-plan">Plan $3.41M</div>
+        </div>
+        <div class="cumpl-card">
+          <div class="cumpl-mes">MAY 2026*</div>
+          <div class="cumpl-circle pa">78%</div>
+          <div class="cumpl-real">Real $2.49M</div>
+          <div class="cumpl-plan">Plan $3.56M parcial</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="col-stack">
+          <!-- TIENDAS BAR -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Tiendas por Venta — Ayer (May 17)</div>
+              <div class="btn-group">
+                <button class="btn-tog active" id="tog-top" onclick="toggleStores('top')">TOP 5</button>
+                <button class="btn-tog" id="tog-btm" onclick="toggleStores('btm')">BTM 5</button>
+              </div>
+            </div>
+            <div class="card-body" id="stores-bar-body"></div>
+          </div>
+
+          <!-- SEMANAL CHART -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Venta Semanal por Canal (May 11–17)</div>
+              <div style="display:flex;gap:14px;font-size:11px">
+                <span><span style="color:#3b82f6">■</span> PH <strong>$679K</strong> ↑</span>
+                <span><span style="color:#f59e0b">■</span> TRU <strong>$39K</strong></span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="chart-wrap" style="height:180px"><canvas id="ch-weekly-dash"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-stack">
+          <!-- ALERTAS -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Alertas del Sistema</div>
+              <span class="badge badge-red">8 activas</span>
+            </div>
+            <div class="card-body" id="dash-alerts-list" style="max-height:260px;overflow-y:auto"></div>
+          </div>
+
+          <!-- RECS -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Recomendaciones IA</div>
+              <span style="font-size:10px;color:var(--muted)">Generado 17/05/2026</span>
+            </div>
+            <div class="card-body" id="dash-recs-list"></div>
+            <div style="padding:8px 16px;border-top:1px solid var(--border)">
+              <span class="ver-todas" onclick="nav('ia','Consulta con IA')">Ver todas las recomendaciones →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /dashboard -->
+
+    <!-- ======================== REPORTE DIARIO ======================== -->
+    <div id="view-daily" class="view">
+      <div class="filter-bar">
+        <span class="filter-label">Fecha:</span>
+        <input type="date" id="daily-date" value="2026-05-17" onchange="renderDaily()">
+        <span class="text-muted fs-11" id="daily-dow"></span>
+      </div>
+      <div class="kpi-grid" id="daily-kpi-grid"></div>
+      <div class="two-col">
+        <div class="col-stack">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Venta por Tienda — Día seleccionado</div></div>
+            <div class="card-body"><div class="chart-wrap" style="height:220px"><canvas id="ch-daily-stores"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Acumulado MTD Mayo vs Plan</div></div>
+            <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="ch-daily-mtd"></canvas></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Detalle Diario — Mayo 2026</div></div>
+          <div class="card-body" style="padding:0;overflow-x:auto">
+            <table id="daily-table">
+              <thead><tr><th>Día</th><th>Day</th><th class="td-num">PH</th><th class="td-num">TRU</th><th class="td-num">Total</th><th class="td-num">Cum PH</th></tr></thead>
+              <tbody id="daily-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== REPORTE SEMANAL ======================== -->
+    <div id="view-weekly" class="view">
+      <div class="filter-bar">
+        <span class="filter-label">Semana:</span>
+        <select id="week-sel" onchange="renderWeekly()">
+          <option value="0">Semana 18 — May 1–7</option>
+          <option value="1">Semana 19 — May 8–14</option>
+          <option value="2" selected>Semana 20 — May 15–17 (parcial)</option>
+        </select>
+      </div>
+      <div class="kpi-grid" id="weekly-kpis"></div>
+      <div class="two-col">
+        <div class="col-stack">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Venta Diaria — Semana Seleccionada</div></div>
+            <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="ch-weekly-bars"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Comparación Semana a Semana</div></div>
+            <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="ch-wow"></canvas></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Desglose por Canal — Semana</div></div>
+          <div class="card-body" id="weekly-breakdown"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== PH ENHANCED ======================== -->
+    <div id="view-ph" class="view">
+      <div class="kpi-grid" id="ph-kpi-grid"></div>
+      <!-- FILTER BAR -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body" style="padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:700;color:var(--muted)">Periodo:</span>
+          <div class="period-sel" id="ph-month-sel">
+            <button class="month-btn on" onclick="togglePHMonth('ENE',this)">ENE</button>
+            <button class="month-btn on" onclick="togglePHMonth('FEB',this)">FEB</button>
+            <button class="month-btn on" onclick="togglePHMonth('MAR',this)">MAR</button>
+            <button class="month-btn on" onclick="togglePHMonth('ABR',this)">ABR</button>
+            <button class="month-btn on" onclick="togglePHMonth('MAY',this)">MAY*</button>
+          </div>
+          <div class="filter-sep"></div>
+          <span style="font-size:11px;font-weight:700;color:var(--muted)">Cliente:</span>
+          <div class="client-toggle">
+            <button class="client-btn ph on" id="ph-btn-PH" onclick="togglePHClient('PH')">🏬 PH</button>
+            <button class="client-btn tru" id="ph-btn-TRU" onclick="togglePHClient('TRU')">🧸 TRU</button>
+          </div>
+          <div class="filter-sep"></div>
+          <span style="font-size:11px;font-weight:700;color:var(--muted)">Vista:</span>
+          <select id="ph-view-mode" onchange="renderPHCharts()" style="font-size:11px">
+            <option value="real">Real 2026</option>
+            <option value="vsplan">Real vs Plan</option>
+            <option value="vs2025">Real vs 2025</option>
+          </select>
+        </div>
+      </div>
+      <div class="two-col-half" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Venta Acumulada por Tienda PH</div><span id="ph-bar-sub" style="font-size:10px;color:var(--muted)">Suma periodo seleccionado</span></div>
+          <div class="card-body"><div class="chart-wrap" style="height:260px"><canvas id="ch-ph-bar"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Participación % por Tienda</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:260px"><canvas id="ch-ph-pie"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-header"><div class="card-title">Evolución Mensual por Tienda PH</div><span style="font-size:10px;color:var(--muted)">Venta real 2026 mes a mes</span></div>
+        <div class="card-body"><div class="chart-wrap" style="height:250px"><canvas id="ch-ph-line"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title" id="ph-table-title">Detalle PH por Tienda</div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>Tienda</th>
+              <th class="td-num">Real 2026</th>
+              <th class="td-num">Plan</th>
+              <th class="td-num">% Cumpl</th>
+              <th class="td-num">vs 2025</th>
+              <th class="td-num">$ Gap Plan</th>
+            </tr></thead>
+            <tbody id="ph-detail-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== TRU ======================== -->
+    <div id="view-tru" class="view">
+      <div class="kpi-grid" id="tru-kpi-grid"></div>
+      <div class="two-col">
+        <div class="col-stack">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Venta Neta Mensual — TRU</div></div>
+            <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="ch-tru-monthly"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Desglose por Categoría — ABR 2026</div></div>
+            <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="ch-tru-cat"></canvas></div></div>
+          </div>
+        </div>
+        <div class="col-stack">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top 10 SKUs TRU — ABR 2026 (estimado)</div></div>
+            <div class="card-body" id="tru-sku-list" style="max-height:280px;overflow-y:auto"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Alertas TRU</div></div>
+            <div class="card-body" id="tru-alerts"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== INVENTARIOS ======================== -->
+    <div id="view-inventarios" class="view">
+      <div class="abc-grid">
+        <div class="abc-card">
+          <div class="abc-letter a">A</div>
+          <div style="font-weight:700;font-size:16px">114 SKUs</div>
+          <div style="font-size:11px;color:var(--muted)">79.8% de la venta</div>
+          <div class="mt-10"><div class="progress"><div class="progress-bar" style="width:79.8%;background:var(--green)"></div></div></div>
+        </div>
+        <div class="abc-card">
+          <div class="abc-letter b">B</div>
+          <div style="font-weight:700;font-size:16px">88 SKUs</div>
+          <div style="font-size:11px;color:var(--muted)">15.1% de la venta</div>
+          <div class="mt-10"><div class="progress"><div class="progress-bar" style="width:15.1%;background:var(--blue)"></div></div></div>
+        </div>
+        <div class="abc-card">
+          <div class="abc-letter c">C</div>
+          <div style="font-weight:700;font-size:16px">174 SKUs</div>
+          <div style="font-size:11px;color:var(--muted)">5.1% de la venta</div>
+          <div class="mt-10"><div class="progress"><div class="progress-bar" style="width:5.1%;background:var(--muted)"></div></div></div>
+        </div>
+      </div>
+
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi-card">
+          <div class="kpi-label">Valor Inventario (costo)</div>
+          <div class="kpi-value">$15.9M</div>
+          <div class="kpi-sub">376 SKUs activos</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Unidades Totales</div>
+          <div class="kpi-value">70,726</div>
+          <div class="kpi-sub">En todas las tiendas PH</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Cobertura Promedio</div>
+          <div class="kpi-value">155 días</div>
+          <div class="kpi-sub">Ideal: 60–90 días</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="col-stack">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Histograma de Cobertura (días)</div></div>
+            <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="ch-inv-hist"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Sobreinventario Crítico (&gt;150 días cob.)</div></div>
+            <div class="card-body" style="padding:0">
+              <table>
+                <thead><tr><th>SKU</th><th>Producto</th><th class="td-num">Inv.</th><th class="td-num">Cob. días</th><th class="td-num">Cap. inmov.</th><th>Acción</th></tr></thead>
+                <tbody id="inv-sobre-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Quiebre de Stock — P1 Agotados</div></div>
+          <div class="card-body" style="padding:0">
+            <table>
+              <thead><tr><th>SKU</th><th>Producto</th><th class="td-num">Venta perdida YTD</th><th>Estado</th></tr></thead>
+              <tbody id="inv-agotados-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== SKUs ======================== -->
+    <div id="view-skus" class="view">
+      <div class="filter-bar">
+        <input class="search-box" id="sku-search" type="text" placeholder="Buscar SKU o producto..." oninput="filterSKUs()">
+        <span class="filter-label">Categoría:</span>
+        <select id="sku-cat" onchange="filterSKUs()">
+          <option value="">Todas</option>
+          <option>PIELES</option><option>ROPA</option><option>ZAPATOS</option><option>RELLENO</option>
+        </select>
+        <span class="filter-label">ABC:</span>
+        <select id="sku-abc" onchange="filterSKUs()">
+          <option value="">Todas</option><option>A</option><option>B</option><option>C</option>
+        </select>
+        <span class="filter-label">Tendencia:</span>
+        <select id="sku-trend" onchange="filterSKUs()">
+          <option value="">Todas</option><option value="up">↑ Subiendo</option><option value="down">↓ Bajando</option><option value="stable">→ Estable</option>
+        </select>
+      </div>
+      <div class="two-col">
+        <div class="card" style="grid-column:1/-1">
+          <div class="card-header"><div class="card-title">Tabla de SKUs — Top 15 YTD</div><span id="sku-count" class="badge badge-blue">15 SKUs</span></div>
+          <div class="card-body" style="padding:0;overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>SKU</th><th>Producto</th><th>Cat.</th>
+                  <th class="td-num">Venta</th><th class="td-num">%</th>
+                  <th class="td-num">Margen</th><th class="td-num">Inv.</th>
+                  <th class="td-num">Cob.</th><th>ABC</th><th>Tend.</th>
+                </tr>
+              </thead>
+              <tbody id="skus-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="two-col mt-14">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Curva Pareto — % Venta Acumulada</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:220px"><canvas id="ch-pareto"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Mapa Venta vs Cobertura</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:220px"><canvas id="ch-bubble"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== ALERTAS ======================== -->
+    <div id="view-alertas" class="view">
+      <div class="filter-bar">
+        <span class="filter-label">Nivel:</span>
+        <select id="alert-lvl" onchange="renderAlertas()">
+          <option value="">Todos</option><option value="critica">Crítica</option><option value="advertencia">Advertencia</option><option value="info">Info</option>
+        </select>
+        <span class="filter-label">Canal:</span>
+        <select id="alert-canal" onchange="renderAlertas()">
+          <option value="">Todos</option><option value="PH">PH</option><option value="TRU">TRU</option><option value="PH+TRU">PH+TRU</option>
+        </select>
+        <span class="filter-label">Categoría:</span>
+        <select id="alert-cat" onchange="renderAlertas()">
+          <option value="">Todas</option><option value="stock">Stock</option><option value="ventas">Ventas</option><option value="inventario">Inventario</option>
+        </select>
+      </div>
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi-card"><div class="kpi-label">Críticas</div><div class="kpi-value text-red">3</div></div>
+        <div class="kpi-card"><div class="kpi-label">Advertencias</div><div class="kpi-value text-orange">5</div></div>
+        <div class="kpi-card"><div class="kpi-label">Informativas</div><div class="kpi-value" style="color:var(--blue)">1</div></div>
+      </div>
+      <div id="alertas-list"></div>
+    </div>
+
+    <!-- ======================== IA ======================== -->
+    <div id="view-ia" class="view">
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🤖 Consulta con IA — BABLAT Análisis</div>
+            <span class="badge badge-green">● En línea</span>
+          </div>
+          <div class="card-body">
+            <div class="chat-area" id="chat-area"></div>
+            <div class="chat-input-row">
+              <input class="chat-input" id="chat-input" type="text" placeholder="Pregunta sobre la operación BABLAT..." onkeydown="if(event.key==='Enter')sendChat()">
+              <button class="chat-send" onclick="sendChat()">Enviar</button>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+              <span class="pill" onclick="quickChat('ventas mayo')">Ventas Mayo</span>
+              <span class="pill" onclick="quickChat('quiebre stock')">Quiebre Stock</span>
+              <span class="pill" onclick="quickChat('santa fe')">Santa Fe</span>
+              <span class="pill" onclick="quickChat('inventario sobrestock')">Sobrestock</span>
+              <span class="pill" onclick="quickChat('recomendaciones ia')">Recomendaciones IA</span>
+              <span class="pill" onclick="quickChat('tru')">TRU</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-stack">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Recomendaciones IA — Todas</div></div>
+            <div class="card-body" id="ia-recs-full"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== UPLOAD ======================== -->
+    <div id="view-upload" class="view">
+      <div class="two-col">
+        <div class="col-stack">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Cargar Datos — Excel / CSV</div></div>
+            <div class="card-body">
+              <div class="dropzone" id="dropzone" ondragover="dropOver(event)" ondragleave="dropLeave(event)" ondrop="dropFile(event)" onclick="document.getElementById('file-input').click()">
+                <div class="dropzone-icon">📂</div>
+                <div class="dropzone-text">Arrastra tu archivo Excel aquí</div>
+                <div class="dropzone-sub">o haz clic para seleccionar · .xlsx, .csv</div>
+              </div>
+              <input type="file" id="file-input" accept=".xlsx,.csv" style="display:none" onchange="loadFile(event)">
+              <div style="margin-top:14px;padding:12px;background:#f9fafb;border:1px solid var(--border);border-radius:var(--radius)">
+                <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">ÚLTIMO ARCHIVO CARGADO</div>
+                <div style="font-weight:600;font-size:12px">Tracker_Ventas_2026_v11_PH_TRU_MAY17.xlsx</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">17 mayo 2026 · 376 SKUs · 8 tiendas PH + TRU</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Formato Esperado</div></div>
+            <div class="card-body">
+              <div style="font-size:12px;color:var(--muted);line-height:1.8">
+                <strong style="color:var(--text)">Columnas requeridas (hoja "Ventas"):</strong><br>
+                Fecha · Tienda · Canal · SKU · Producto · Categoría · Piezas · Venta IVA · Venta Neta · Plan<br><br>
+                <strong style="color:var(--text)">Columnas requeridas (hoja "Inventario"):</strong><br>
+                SKU · Producto · Categoría · Inventario · ABC · Días Cobertura<br><br>
+                <strong style="color:var(--text)">Formato de fecha:</strong> DD/MM/YYYY o YYYY-MM-DD
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Vista Previa — Últimas filas cargadas</div></div>
+          <div class="card-body" id="upload-preview" style="padding:0;overflow-x:auto">
+            <div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Carga un archivo para ver la vista previa</div>
+          </div>
+          <div id="upload-status" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:#d1fae5;border-radius:0 0 var(--radius) var(--radius)">
+            <span style="color:#059669;font-weight:700">✓ Datos actualizados correctamente</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== TENDENCIA MENSUAL ======================== -->
+    <div id="view-tendencia" class="view">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">YTD Real 2026</div><div class="kpi-value">$19.1M</div><div class="kpi-sub">ENE–MAY 2026 (MAY parcial)</div><div class="kpi-delta up">↑ +107% vs plan YTD</div></div>
+        <div class="kpi-card"><div class="kpi-label">Crecimiento vs 2025</div><div class="kpi-value">+127%</div><div class="kpi-sub">Promedio ENE–MAY vs 2025</div><div class="kpi-delta up">↑ 5 meses con datos</div></div>
+        <div class="kpi-card"><div class="kpi-label">Mejor Mes (Cumpl)</div><div class="kpi-value">ABR 126%</div><div class="kpi-sub">$4.29M vs $3.41M plan</div><div class="kpi-delta up">↑ Sobre plan</div></div>
+        <div class="kpi-card"><div class="kpi-label">Plan Anual 2026</div><div class="kpi-value">$70.1M</div><div class="kpi-sub">Suma 12 meses</div><div class="kpi-delta warn">⚠ MAY en riesgo</div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-header"><div class="card-title">Real 2026 vs Plan Optimista vs Real 2025</div><span style="font-size:10px;color:var(--muted)">Año completo — MAY parcial al día 17</span></div>
+        <div class="card-body"><div class="chart-wrap" style="height:300px"><canvas id="ch-tend-main"></canvas></div></div>
+      </div>
+      <div class="two-col-half">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Crecimiento % vs 2025 por Mes</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:220px"><canvas id="ch-tend-growth"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Cumplimiento % vs Plan por Mes</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:220px"><canvas id="ch-tend-cumpl"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== KPIs OPERATIVOS ======================== -->
+    <div id="view-kpis" class="view">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">KPIs Operativos — PH (Portal)</div>
+      <!-- Filter bar -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body" style="padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:700;color:var(--muted)">Filtrar Periodo:</span>
+          <div class="period-sel" id="kpi-month-sel">
+            <button class="month-btn on" onclick="toggleKPIMonth('ENE',this)">ENE</button>
+            <button class="month-btn on" onclick="toggleKPIMonth('FEB',this)">FEB</button>
+            <button class="month-btn on" onclick="toggleKPIMonth('MAR',this)">MAR</button>
+            <button class="month-btn on" onclick="toggleKPIMonth('ABR',this)">ABR</button>
+            <button class="month-btn on" onclick="toggleKPIMonth('MAY',this)">MAY*</button>
+          </div>
+          <div class="filter-sep"></div>
+          <button onclick="kpiSelAll(true)" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:#fff">Todos</button>
+          <button onclick="kpiSelAll(false)" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:#fff">Limpiar</button>
+        </div>
+      </div>
+      <!-- Big KPI cards -->
+      <div class="kpi-op-grid">
+        <div class="kpi-op-card upt">
+          <div class="kpi-op-icon">📦</div>
+          <div class="kpi-op-label">UPT — Units Per Transaction</div>
+          <div class="kpi-op-value upt" id="kv-upt">—</div>
+          <div class="kpi-op-sub">Unidades promedio por transacción</div>
+          <div class="kpi-op-trend" id="kt-upt"></div>
+        </div>
+        <div class="kpi-op-card ticket">
+          <div class="kpi-op-icon">🧾</div>
+          <div class="kpi-op-label">Ticket Promedio</div>
+          <div class="kpi-op-value ticket" id="kv-ticket">—</div>
+          <div class="kpi-op-sub">Venta promedio por transacción (MXN)</div>
+          <div class="kpi-op-trend" id="kt-ticket"></div>
+        </div>
+        <div class="kpi-op-card att">
+          <div class="kpi-op-icon">💰</div>
+          <div class="kpi-op-label">ATT — Avg Ticket Transaction</div>
+          <div class="kpi-op-value att" id="kv-att">—</div>
+          <div class="kpi-op-sub">Venta total ÷ transacciones (periodo)</div>
+          <div class="kpi-op-trend" id="kt-att"></div>
+        </div>
+      </div>
+      <!-- Charts row 1 -->
+      <div class="two-col-half" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">UPT Mensual</div><span style="font-size:10px;color:var(--muted)">Benchmark ideal: 4–5 u/tx</span></div>
+          <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="ch-kpi-upt"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Ticket Promedio vs ATT Mensual</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="ch-kpi-ticket"></canvas></div></div>
+        </div>
+      </div>
+      <!-- Charts row 2 -->
+      <div class="two-col-half" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Transacciones por Mes</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:180px"><canvas id="ch-kpi-trans"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Unidades Totales Vendidas</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:180px"><canvas id="ch-kpi-unid"></canvas></div></div>
+        </div>
+      </div>
+      <!-- Summary table -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Tabla Resumen KPIs por Mes</div><span style="font-size:10px;color:var(--muted)">* MAY parcial al día 17</span></div>
+        <div class="card-body" style="padding:0;overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>Mes</th>
+              <th class="td-num">Venta PH</th>
+              <th class="td-num">Trans.</th>
+              <th class="td-num">Unidades</th>
+              <th class="td-num">Skins</th>
+              <th class="td-num">UPT</th>
+              <th class="td-num">Ticket Prom.</th>
+              <th class="td-num">ATT (calc.)</th>
+              <th class="td-num">% Cumpl Plan</th>
+            </tr></thead>
+            <tbody id="kpi-summary-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== REPORTES MENSUALES ======================== -->
+    <div id="view-reportes" class="view">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Reportes Mensuales 2026</div>
+      <!-- Month selector -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body" style="padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:700;color:var(--muted)">Ver mes detalle:</span>
+          <div class="period-sel">
+            <button class="month-btn" onclick="showReporteMes('ENE')">ENE</button>
+            <button class="month-btn" onclick="showReporteMes('FEB')">FEB</button>
+            <button class="month-btn" onclick="showReporteMes('MAR')">MAR</button>
+            <button class="month-btn" onclick="showReporteMes('ABR')">ABR</button>
+            <button class="month-btn" onclick="showReporteMes('MAY')">MAY*</button>
+          </div>
+          <div class="filter-sep"></div>
+          <button onclick="showReporteMes(null)" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:#fff">Ver comparativo</button>
+        </div>
+      </div>
+      <!-- Comparative table (all 5 months side by side) -->
+      <div id="rep-comparative" class="card" style="margin-bottom:14px">
+        <div class="card-header"><div class="card-title">Comparativo ENE–MAY 2026</div><span style="font-size:10px;color:var(--muted)">Selecciona un mes para ver detalle</span></div>
+        <div class="card-body" style="padding:0;overflow-x:auto">
+          <table id="rep-compare-table">
+            <thead><tr>
+              <th>Métrica</th>
+              <th class="td-num">ENE</th>
+              <th class="td-num">FEB</th>
+              <th class="td-num">MAR</th>
+              <th class="td-num">ABR</th>
+              <th class="td-num">MAY*</th>
+            </tr></thead>
+            <tbody id="rep-compare-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Monthly detail panel (shown when month selected) -->
+      <div id="rep-detail" style="display:none">
+        <div class="two-col-half" style="margin-bottom:14px">
+          <div class="card">
+            <div class="card-header"><div class="card-title" id="rep-detail-title">Detalle Mensual</div></div>
+            <div class="card-body"><div class="chart-wrap" style="height:240px"><canvas id="ch-rep-stores"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">KPIs del Mes</div></div>
+            <div class="card-body" id="rep-kpi-cards"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header"><div class="card-title">Tiendas — Detalle del Mes</div></div>
+          <div class="card-body" style="padding:0;overflow-x:auto">
+            <table>
+              <thead><tr>
+                <th>Tienda</th>
+                <th class="td-num">Real 2026</th>
+                <th class="td-num">Plan</th>
+                <th class="td-num">% Cumpl</th>
+                <th class="td-num">vs 2025</th>
+                <th class="td-num">$ Gap Plan</th>
+              </tr></thead>
+              <tbody id="rep-stores-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Top SKUs del Mes — YTD</div></div>
+          <div class="card-body">
+            <div id="rep-top-skus"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const MONTHLY={
+  labels:['ENE','FEB','MAR','ABR','MAY'],
+  plan:[5017757,2860930,3122750,3413466,3557760],
+  real25:[2185695,1518515,1445170,1533400,1609460],
+  real26:[5821692,3319667,3163388,4285888,2486983],
+  cumpl:[116.0,116.0,101.3,125.6,77.5],
+  var_2025:[166.4,118.6,118.9,179.5,54.5]
+};
+// Full-year data for Tendencia view
+const MONTHLY_FULL={
+  labels:['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'],
+  plan:[5017757,2860930,3122750,3413466,3557760,4164051,4871812,5991276,5577567,6881463,8144219,16487451],
+  real25:[2185695,1518515,1445170,1533400,1609460,1856117,2980133,3463016,3657482,4260606,4221319,8362916],
+  real26:[5821692,3319667,3163388,4285888,2486983,null,null,null,null,null,null,null],
+  var_2025:[166.4,118.6,118.9,179.5,54.5,null,null,null,null,null,null,null]
+};
+const KPI_OP={
+  ENE:{trans:4612,unid:20752,skins:3440,ticket:1262,venta:5821692,cumpl:116.0},
+  FEB:{trans:2437,unid:12060,skins:1797,ticket:1362,venta:3319667,cumpl:116.0},
+  MAR:{trans:2353,unid:10579,skins:1779,ticket:1344,venta:3163388,cumpl:101.3},
+  ABR:{trans:2885,unid:12473,skins:2012,ticket:1267,venta:4285888,cumpl:125.6},
+  MAY:{trans:791, unid:10399,skins:558, ticket:1296,venta:2486983,cumpl:77.5}
+};
+const PH_STORES=['Polanco','Santa Fe','Perisur','Durango','Guadalajara','Puebla','Querétaro','Online PH'];
+const PH_COLORS=['#3b82f6','#ef4444','#f59e0b','#10b981','#8b5cf6','#06b6d4','#f97316','#6b7280'];
+const PH_DATA={
+  ENE:{plan:[941670,425336,669514,291762,604917,682631,791488,51587],real:[1092338,493389,776636,338444,701703,791852,918126,60935],real25:[710294,391069,810078,274255,0,0,0,0]},
+  FEB:{plan:[563872,302807,518800,188955,423220,334067,495755,33454],real:[654092,351256,601808,219187,490936,387517,575076,39794],real25:[480506,346817,535259,151190,0,0,0,4743]},
+  MAR:{plan:[654619,349574,477896,176259,456535,419323,560073,28472],real:[719090,323045,464246,158887,511833,435249,520703,30335],real25:[457129,319439,504860,157420,0,0,0,6322]},
+  ABR:{plan:[576309,372029,524301,186173,491379,426724,603448,43103],real:[657118,364087,579208,210126,683119,573942,543426,44618],real25:[523917,338208,476637,177307,0,0,0,18804]},
+  MAY:{plan:[527535,395623,592846,215334,515948,448060,633621,38793],real:[639735,283297,608836,187815,528211,405714,454643,29353],real25:[479577,359657,538950,205080,0,0,0,26408]}
+};
+const TRU_DATA=[
+  {mes:'ENE',piezas:null,ventaNeta:null},
+  {mes:'FEB',piezas:null,ventaNeta:null},
+  {mes:'MAR',piezas:null,ventaNeta:null},
+  {mes:'ABR',periodo:'09–30 ABR',piezas:1791,ventaIVA:630243,ventaNeta:630243},
+  {mes:'MAY',periodo:'01–23 MAY',piezas:895,ventaIVA:310683,ventaNeta:310683}
+  // Fuente: ZRTL_ZRETAIL5 — Tienda 1085 TRU Parque República (día 21-23 estimado)
+];
+// Datos reales: Libro9 (1).xlsx (PH) + ZRTL_ZRETAIL5 (TRU) — Mayo 2026 · Actualizado 23 May
+const MAY_DAILY=[
+  {d:1, w:'V', ph:439188,tru:72993},
+  {d:2, w:'S', ph:270941,tru:19530},
+  {d:3, w:'D', ph:310486,tru:49725},
+  {d:4, w:'L', ph:109824,tru:9802},
+  {d:5, w:'M', ph:105216,tru:7132},
+  {d:6, w:'Mi',ph:56454, tru:10103},
+  {d:7, w:'J', ph:93007, tru:11338},
+  {d:8, w:'V', ph:110275,tru:3871},
+  {d:9, w:'S', ph:183785,tru:30557},
+  {d:10,w:'D', ph:112674,tru:8977},
+  {d:11,w:'L', ph:55114, tru:3593},
+  {d:12,w:'M', ph:42207, tru:7250},
+  {d:13,w:'Mi',ph:39668, tru:2760},
+  {d:14,w:'J', ph:70394, tru:4428},
+  {d:15,w:'V', ph:113157,tru:1616},
+  {d:16,w:'S', ph:159299,tru:9958},
+  {d:17,w:'D', ph:189163,tru:18347},
+  {d:18,w:'L', ph:121246,tru:2903},
+  {d:19,w:'M', ph:105293,tru:2999},
+  {d:20,w:'Mi',ph:92530, tru:5909},
+  {d:21,w:'J', ph:75000, tru:4200},
+  {d:22,w:'V', ph:120000,tru:7500},
+  {d:23,w:'S', ph:141314,tru:15200}
+];
+// Top SKUs — PH Mayo 2026 (Libro9 + CSV reporte al 23 May) + TRU Abr-May 2026 (ZRTL) | YTD incluye tracker v11
+const PRODUCTS=[
+  {rank:1, sku:'922601',art:'PAWLETTE',         cat:'PIELES',  venta:731843,pct:4.97,margen:35.1,inv:949, cob:99, abc:'A',trend:'up',   ph_may:183833,tru_ytd:51376},
+  {rank:2, sku:'926518',art:'TEDDY',             cat:'PIELES',  venta:709759,pct:4.82,margen:35.1,inv:710, cob:82, abc:'A',trend:'up',   ph_may:117402,tru_ytd:52701},
+  {rank:3, sku:'924935',art:'ACC GRABA MENSAJE', cat:'RELLENO', venta:575022,pct:3.91,margen:36.5,inv:1507,cob:81, abc:'A',trend:'stable',ph_may:128865,tru_ytd:40133},
+  {rank:4, sku:'924713',art:'ACC CORAZÓN Q LATE',cat:'RELLENO', venta:470867,pct:3.20,margen:29.5,inv:1679,cob:75, abc:'A',trend:'up',   ph_may:56327, tru_ytd:36020},
+  {rank:5, sku:'925567',art:'ABRAZOS FELICES',   cat:'PIELES',  venta:431382,pct:2.93,margen:35.0,inv:1078,cob:191,abc:'A',trend:'up',   ph_may:80202, tru_ytd:13251},
+  {rank:6, sku:'929486',art:'AJOLOTE',            cat:'PIELES',  venta:358362,pct:2.43,margen:35.4,inv:372, cob:96, abc:'A',trend:'up',   ph_may:83537, tru_ytd:31865},
+  {rank:7, sku:'925239',art:'CACHORRO BROWNIE',   cat:'PIELES',  venta:318614,pct:2.16,margen:35.1,inv:473, cob:74, abc:'A',trend:'up',   ph_may:43425, tru_ytd:34940},
+  {rank:8, sku:'925539',art:'MONO SONRIENTE',     cat:'PIELES',  venta:234574,pct:1.59,margen:35.2,inv:512, cob:150,abc:'A',trend:'stable',ph_may:0,     tru_ytd:22706},
+  {rank:9, sku:'933639',art:'PAWLETTE II',        cat:'PIELES',  venta:228049,pct:1.55,margen:24.4,inv:42,  cob:15, abc:'A',trend:'up',   ph_may:58283, tru_ytd:0},
+  {rank:10,sku:'930856',art:'RANA VERDE',          cat:'PIELES',  venta:189415,pct:1.29,margen:35.8,inv:627, cob:283,abc:'A',trend:'down', ph_may:0,     tru_ytd:21217},
+  {rank:11,sku:'925720',art:'CACHORRO PUDÍN',      cat:'PIELES',  venta:185617,pct:1.26,margen:35.2,inv:857, cob:231,abc:'A',trend:'down', ph_may:0,     tru_ytd:23829},
+  {rank:12,sku:'923324',art:'GRAN ELEFANTE',       cat:'PIELES',  venta:170507,pct:1.16,margen:28.8,inv:76,  cob:16, abc:'A',trend:'up',   ph_may:40058, tru_ytd:13326},
+  {rank:13,sku:'921512',art:'CALZADO CANVAS',      cat:'ZAPATOS', venta:168178,pct:1.14,margen:30.6,inv:617, cob:96, abc:'A',trend:'stable',ph_may:36602, tru_ytd:15192},
+  {rank:14,sku:'932419',art:'PIJAMA ROSA',         cat:'ROPA',    venta:165293,pct:1.12,margen:34.9,inv:25,  cob:9,  abc:'A',trend:'up',   ph_may:36147, tru_ytd:12393},
+  {rank:15,sku:'932614',art:'ROPERITO BAB',        cat:'ACCESORIO',venta:164937,pct:1.12,margen:35.7,inv:163, cob:37, abc:'A',trend:'stable',ph_may:38838, tru_ytd:0},
+];
+const AGOTADOS=[
+  {sku:'933552',art:'VESTIDO HADA UNICORNIO',venta:49011},
+  {sku:'934082',art:'CHAMARRA SHERPA',venta:39228},
+  {sku:'934126',art:'SUETER ROSA BRILLANTE',venta:30846},
+  {sku:'934162',art:'CHAMARRA APERLADA',venta:30072},
+  {sku:'932829',art:'BULLDOG FRANCÉS',venta:15504},
+  {sku:'933947',art:'VESTIDO FRESA',venta:11562},
+  {sku:'933559',art:'BFF VESTIDO LENTEJUELAS',venta:9941},
+  {sku:'929565',art:'PANTUFLAS TARTAN',venta:8931},
+];
+const ALERTS=[
+  {id:1,lvl:'critica',cat:'stock',title:'Quiebre de stock — VESTIDO HADA UNICORNIO (933552)',desc:'Sin unidades disponibles · Venta perdida estimada $49K YTD · Demanda activa comprobada',store:'Multi PH',canal:'PH',ts:'Hace 2 días',accion:'Reordenar urgente'},
+  {id:2,lvl:'critica',cat:'stock',title:'Quiebre de stock — CHAMARRA SHERPA (934082)',desc:'Sin unidades disponibles · Venta perdida $39K YTD · 3 tiendas afectadas',store:'Multi PH',canal:'PH',ts:'Hace 3 días',accion:'Reordenar urgente'},
+  {id:3,lvl:'advertencia',cat:'ventas',title:'Caída de ventas -28.4% — Santa Fe MAY 2026',desc:'Real $283K vs Plan $396K · Brecha $112K · Tendencia en recuperación',store:'Santa Fe',canal:'PH',ts:'MAY 2026',accion:'Monitorear'},
+  {id:4,lvl:'advertencia',cat:'stock',title:'PAWLETTE II — Clase A en riesgo quiebre (15 días cob.)',desc:'Solo 42 uds. disponibles · Al ritmo actual se agota en 15 días · SKU #9 en ventas',store:'Multi PH',canal:'PH',ts:'Urgente',accion:'Transferir stock'},
+  {id:5,lvl:'advertencia',cat:'stock',title:'PIJAMA ROSA — Clase A en riesgo quiebre (9 días cob.)',desc:'Solo 25 uds. disponibles · Agotamiento inminente · Alto margen 34.9%',store:'Multi PH',canal:'PH',ts:'Crítico',accion:'Reordenar inmediato'},
+  {id:6,lvl:'advertencia',cat:'inventario',title:'Sobreinventario crítico — RANA VERDE (930856)',desc:'283 días de cobertura · Excede ideal 5x · Capital inmovilizado ~$75K',store:'Multi PH',canal:'PH',ts:'En revisión',accion:'Liquidación'},
+  {id:7,lvl:'advertencia',cat:'inventario',title:'Sobreinventario crítico — CACHORRO PUDÍN (925720)',desc:'231 días de cobertura · 857 uds. en piso · Capital inmovilizado ~$103K',store:'Multi PH',canal:'PH',ts:'En revisión',accion:'Liquidación'},
+  {id:8,lvl:'info',cat:'ventas',title:'MAY 2026 — Cumplimiento 88% del plan (parcial día 23)',desc:'PH Acumulado $3.12M · TRU $311K · Total $3.43M vs Plan $3.56M · Quedan 8 días · 10,399 unidades vendidas · Inv 62,521 uds',store:'General',canal:'PH+TRU',ts:'23 May 2026',accion:'Monitorear'},
+];
+const RECS=[
+  {n:1,title:'Transferir inventario PAWLETTE II antes del quiebre',
+   desc:'PAWLETTE II (933639) tiene solo 42 unidades y se agota en 15 días al ritmo actual. Reubicar 20 uds. desde Querétaro (stock amplio) a Polanco y Santa Fe donde la rotación es mayor. Extiende cobertura a 28+ días mientras llega reorden al proveedor.',
+   tags:['Multi PH','Inventario','Urgente'],fuente:'Análisis YTD 23/05',impact:'Alto'},
+  {n:2,title:'Plan de rescate Santa Fe — caída -37.7% en MAY',
+   desc:'Santa Fe PH acumula $223K vs $396K plan en MAY (-37.7%). La caída viene de ROPA y CALZADO. Acción: activar exhibición especial de línea PELUCHE (mayor margen y rotación), coordinar visita de cuenta con gerente de piso esta semana para identificar causa raíz.',
+   tags:['Santa Fe','Ventas','PH'],fuente:'Tracker v11 17/05',impact:'Alto'},
+  {n:3,title:'Liquidación inmediata — 3 productos >200 días cobertura',
+   desc:'RANA VERDE (283d), CACHORRO PUDÍN (231d) y ABRAZOS FELICES (191d) inmovilizan ~$150K en capital. Propuesta: descuento 25-30% en tiendas con mayor tráfico (Polanco, Guadalajara) para liberar espacio y capital antes del cierre de mayo.',
+   tags:['Inventario','Liquidación','Multi'],fuente:'Análisis Inventario',impact:'Medio'},
+  {n:4,title:'Reorden urgente P1 — 8 SKUs agotados con demanda activa',
+   desc:'8 SKUs están a $0 inventario pero muestran demanda histórica comprobada (total $195K YTD en ventas pasadas). Venta perdida estimada: $15-20K por semana sin reabasto. Iniciar proceso de compra con proveedor esta semana para los top 4 por volumen.',
+   tags:['Compras','P1','Urgente'],fuente:'Análisis P1 Agotados',impact:'Alto'},
+];
+
+// Top SKUs TRU — ABR+MAY 2026 — Fuente: ZRTL_ZRETAIL5 Tienda 1085
+const TRU_SKUS=[
+  {rank:1, sku:'1197515558',art:'TEDDY',            cat:'PIELES',  venta:52701,unid:70},
+  {rank:2, sku:'1197515551',art:'PAWLETTE',          cat:'PIELES',  venta:51376,unid:68},
+  {rank:3, sku:'1197515565',art:'ACC GRABA MENSAJE', cat:'RELLENO', venta:40133,unid:146},
+  {rank:4, sku:'1197515572',art:'ACC CORAZÓN Q LATE',cat:'RELLENO', venta:36020,unid:168},
+  {rank:5, sku:'1197515617',art:'CACHORRO BROWNIE',  cat:'PIELES',  venta:34940,unid:70},
+  {rank:6, sku:'1197515589',art:'AJOLOTE',            cat:'PIELES',  venta:31865,unid:37},
+  {rank:7, sku:'1197515596',art:'KITTY',              cat:'PIELES',  venta:28927,unid:45},
+  {rank:8, sku:'1197515603',art:'CACHORRO PUDÍN',    cat:'PIELES',  venta:23829,unid:48},
+  {rank:9, sku:'1197515610',art:'MONO SONRIENTE',    cat:'PIELES',  venta:22706,unid:33},
+  {rank:10,sku:'1197515624',art:'RANA VERDE',        cat:'PIELES',  venta:21217,unid:28},
+  {rank:11,sku:'1197515631',art:'OSO ARCOIRIS',      cat:'PIELES',  venta:19014,unid:24},
+  {rank:12,sku:'1197515648',art:'CACHORRO JUGUETÓN', cat:'PIELES',  venta:15778,unid:24},
+  {rank:13,sku:'1197515655',art:'CALZADO CANVAS',    cat:'ZAPATOS', venta:15192,unid:59},
+  {rank:14,sku:'1197515662',art:'SUDADERA ABRAZOS',  cat:'ROPA',    venta:13704,unid:46},
+  {rank:15,sku:'1197515669',art:'GRAN ELEFANTE',     cat:'PIELES',  venta:13326,unid:14},
+];
+// ABR daily TRU — Fuente: ZRTL_ZRETAIL5 Tienda 1085 (ABR 09-30)
+const ABR_DAILY_TRU=[
+  {d:9, v:20184},{d:10,v:46509},{d:11,v:50477},{d:12,v:67731},{d:13,v:7520},
+  {d:14,v:47897},{d:15,v:43476},{d:16,v:44834},{d:17,v:17702},{d:18,v:3720},
+  {d:19,v:3220}, {d:20,v:4513},{d:21,v:4218},{d:22,v:13434},{d:23,v:11454},
+  {d:24,v:14437},{d:25,v:12440},{d:26,v:9266}, {d:27,v:22736},{d:28,v:17534},
+  {d:29,v:16066},{d:30,v:7075}
+];
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const fmtM  = v => v==null?'—':'$'+(v/1e6).toFixed(2)+'M';
+const fmtK  = v => v==null?'—':'$'+(v>=1000?(v/1000).toFixed(1)+'K':Math.round(v).toString());
+const fmtN  = v => v==null?'—':'$'+Math.round(v).toLocaleString('es-MX');
+const fmtP  = (v,d=1) => v==null?'—':v.toFixed(d)+'%';
+const arrow = v => v>0?`<span class="text-green">↑${Math.abs(v).toFixed(1)}%</span>`:`<span class="text-red">↓${Math.abs(v).toFixed(1)}%</span>`;
+const charts = {};
+function mkChart(id, config) {
+  if(charts[id]) charts[id].destroy();
+  const el = $(id);
+  if(!el) return;
+  charts[id] = new Chart(el.getContext('2d'), config);
+}
+
+// ─── CLOCK ───────────────────────────────────────────────────────────────────
+function updateClock(){
+  const now = new Date();
+  const mx = new Intl.DateTimeFormat('es-MX',{timeZone:'America/Mexico_City',weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now);
+  $('live-dt').textContent = mx;
+}
+updateClock(); setInterval(updateClock,1000);
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+function nav(viewId, label){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+  $('view-'+viewId).classList.add('active');
+  document.querySelectorAll(`[data-view="${viewId}"]`).forEach(l=>l.classList.add('active'));
+  $('page-title').textContent = label;
+  initView(viewId);
+}
+function initView(id){
+  const fns={dashboard:initDashboard,daily:initDaily,weekly:initWeekly,ph:initPHEnhanced,tru:initTRU,inventarios:initInventarios,skus:initSKUs,alertas:renderAlertas,ia:initIA,upload:null,tendencia:initTendencia,kpis:initKPIs,reportes:initReportes};
+  if(fns[id]) fns[id]();
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+let storesMode = 'top';
+function toggleStores(mode){
+  storesMode = mode;
+  $('tog-top').classList.toggle('active', mode==='top');
+  $('tog-btm').classList.toggle('active', mode==='btm');
+  renderStoresBar();
+}
+
+function renderStoresBar(){
+  const body = $('stores-bar-body');
+  if(storesMode==='top'){
+    // May 17 estimated by store proportions from PH_DATA.MAY.real
+    const total_may17_ph = 189163;
+    const total_may_ph = PH_DATA.MAY.real.reduce((a,b)=>a+b,0);
+    const est = PH_DATA.MAY.real.map(v=>Math.round(v/total_may_ph*total_may17_ph));
+    const items = [
+      {name:'Guadalajara PH', val:est[4], delta:5.2, color:'#8b5cf6'},
+      {name:'Polanco PH',      val:est[0], delta:8.1, color:'#3b82f6'},
+      {name:'Perisur PH',      val:est[2], delta:3.4, color:'#f59e0b'},
+      {name:'Puebla PH',       val:est[5], delta:2.1, color:'#06b6d4'},
+      {name:'TRU P. República', val:18347,  delta:null, color:'#6b7280'},
+    ];
+    const maxV = Math.max(...items.map(i=>i.val));
+    body.innerHTML = items.map(i=>`
+      <div class="bar-row">
+        <div class="bar-label">${i.name}</div>
+        <div class="bar-outer"><div class="bar-inner" style="width:${(i.val/maxV*100).toFixed(0)}%;background:${i.color}"></div></div>
+        <div class="bar-val">${fmtK(i.val)}</div>
+        <div class="bar-delta">${i.delta!=null?arrow(i.delta):'—'}</div>
+      </div>`).join('');
+  } else {
+    // BTM 5 MAY MTD
+    const items2 = [
+      {name:'Santa Fe PH',  real:PH_DATA.MAY.real[1], plan:PH_DATA.MAY.plan[1]},
+      {name:'Durango PH',   real:PH_DATA.MAY.real[3], plan:PH_DATA.MAY.plan[3]},
+      {name:'Querétaro PH', real:PH_DATA.MAY.real[6], plan:PH_DATA.MAY.plan[6]},
+      {name:'Perisur PH',   real:PH_DATA.MAY.real[2], plan:PH_DATA.MAY.plan[2]},
+      {name:'Online PH',    real:PH_DATA.MAY.real[7], plan:PH_DATA.MAY.plan[7]},
+    ].map(i=>({...i,pct:((i.real-i.plan)/i.plan*100)}));
+    const maxV2 = Math.max(...items2.map(i=>i.real));
+    body.innerHTML = items2.map(i=>`
+      <div class="bar-row">
+        <div class="bar-label">${i.name}</div>
+        <div class="bar-outer"><div class="bar-inner" style="width:${(i.real/maxV2*100).toFixed(0)}%;background:#ef4444"></div></div>
+        <div class="bar-val">${fmtK(i.real)}</div>
+        <div class="bar-delta">${arrow(i.pct)} <span style="font-size:10px;color:var(--muted)">vs plan</span></div>
+      </div>`).join('');
+  }
+}
+
+function initDashboard(){
+  renderStoresBar();
+  // weekly stacked bar
+  const week3 = MAY_DAILY.slice(10);
+  mkChart('ch-weekly-dash',{
+    type:'bar',
+    data:{
+      labels:week3.map(d=>`${d.w}${d.d}`),
+      datasets:[
+        {label:'PH',data:week3.map(d=>d.ph),backgroundColor:'#3b82f6',borderRadius:3},
+        {label:'TRU',data:week3.map(d=>d.tru),backgroundColor:'#f59e0b',borderRadius:3},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'},grid:{color:'#f3f4f6'}}}}
+  });
+  // alerts dash
+  const alertList = $('dash-alerts-list');
+  alertList.innerHTML = ALERTS.slice(0,5).map(a=>alertCard(a,true)).join('')+
+    `<div style="padding:6px 0"><span class="ver-todas" onclick="nav('alertas','Centro de Alertas')">Ver todas las alertas (${ALERTS.length}) →</span></div>`;
+  // recs dash
+  $('dash-recs-list').innerHTML = RECS.slice(0,2).map(r=>recCard(r)).join('');
+}
+
+function alertCard(a, compact=false){
+  const icons={critica:'🔴',advertencia:'🟡',info:'🔵'};
+  const badges={critica:'badge-red',advertencia:'badge-yellow',info:'badge-blue'};
+  const labels={critica:'Crítica',advertencia:'Advertencia',info:'Info'};
+  return `<div class="alert-card ${a.lvl}">
+    <div class="alert-icon">${icons[a.lvl]}</div>
+    <div class="alert-body">
+      <div class="alert-title">${a.title}</div>
+      ${!compact?`<div class="alert-desc">${a.desc}</div>`:''}
+      <div class="alert-footer">
+        <span class="badge ${badges[a.lvl]}">${labels[a.lvl]}</span>
+        <span class="badge badge-gray">${a.store}</span>
+        <span class="badge badge-gray">${a.canal}</span>
+        <span style="font-size:10px;color:var(--muted)">${a.ts}</span>
+        ${!compact?`<button class="alert-action">${a.accion}</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function recCard(r){
+  const ic={Alto:'impact-alto',Medio:'impact-medio'};
+  return `<div class="rec-card">
+    <div class="rec-header">
+      <div class="rec-num">${r.n}</div>
+      <div class="rec-title">${r.title} <span class="${ic[r.impact]||''}">[${r.impact}]</span></div>
+    </div>
+    <div class="rec-desc">${r.desc}</div>
+    <div class="rec-tags">${r.tags.map(t=>`<span class="pill">${t}</span>`).join('')}<span style="font-size:10px;color:var(--muted);margin-left:4px">${r.fuente}</span></div>
+  </div>`;
+}
+
+// ─── DAILY ───────────────────────────────────────────────────────────────────
+function initDaily(){ renderDaily(); }
+function renderDaily(){
+  const dateVal = $('daily-date').value;
+  const day = parseInt(dateVal.split('-')[2])||17;
+  const rec = MAY_DAILY.find(d=>d.d===day)||MAY_DAILY[MAY_DAILY.length-1];
+  const dows=['','L','M','Mi','J','V','S','D'];
+  $('daily-dow').textContent = `${rec.w} — Día ${rec.d} de Mayo 2026`;
+  // KPIs
+  const total = rec.ph + rec.tru;
+  const planDay = Math.round(MONTHLY.plan[4]/31);
+  $('daily-kpi-grid').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Venta Total</div><div class="kpi-value">${fmtK(total)}</div><div class="kpi-sub">PH + TRU</div><div class="kpi-delta ${total>=planDay?'up':'down'}">${total>=planDay?'↑':'↓'} vs plan día (${fmtK(planDay)})</div></div>
+    <div class="kpi-card"><div class="kpi-label">PH</div><div class="kpi-value">${fmtK(rec.ph)}</div><div class="kpi-sub">${fmtP(rec.ph/total*100)} del total</div></div>
+    <div class="kpi-card"><div class="kpi-label">TRU</div><div class="kpi-value">${fmtK(rec.tru)}</div><div class="kpi-sub">${fmtP(rec.tru/total*100)} del total</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ticket Promedio</div><div class="kpi-value">${fmtN(KPI_OP.MAY.ticket)}</div><div class="kpi-sub">Mayo MTD promedio</div></div>
+  `;
+  // Store bar for day
+  const total_ph = PH_DATA.MAY.real.reduce((a,b)=>a+b,0);
+  const dayEst = PH_DATA.MAY.real.map(v=>Math.round(v/total_ph*rec.ph));
+  mkChart('ch-daily-stores',{
+    type:'bar',
+    data:{labels:PH_STORES, datasets:[{label:'Venta estimada',data:dayEst,backgroundColor:PH_COLORS,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}}}}
+  });
+  // MTD cumulative
+  const until = MAY_DAILY.filter(d=>d.d<=day);
+  const cumPH = [], cumTotal = [];
+  let cPH=0;
+  until.forEach(d=>{cPH+=d.ph; cumPH.push(cPH);});
+  const planPerDay = MONTHLY.plan[4]/31;
+  const planCum = until.map((_,i)=>Math.round(planPerDay*(i+1)));
+  mkChart('ch-daily-mtd',{
+    type:'line',
+    data:{
+      labels:until.map(d=>`${d.d}/${d.w}`),
+      datasets:[
+        {label:'Real PH',data:cumPH,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.08)',fill:true,tension:.3,pointRadius:3},
+        {label:'Plan',data:planCum,borderColor:'#ef4444',borderDash:[5,3],fill:false,tension:.3,pointRadius:2},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>'$'+(v/1e6).toFixed(2)+'M'}}}}
+  });
+  // Table
+  let cumPh2=0;
+  $('daily-tbody').innerHTML = MAY_DAILY.map(d=>{
+    cumPh2+=d.ph;
+    const sel = d.d===day;
+    return `<tr style="${sel?'background:#eff6ff;font-weight:600':''}">
+      <td>${d.d}</td><td>${d.w}</td>
+      <td class="td-num">${fmtK(d.ph)}</td>
+      <td class="td-num">${fmtK(d.tru)}</td>
+      <td class="td-num">${fmtK(d.ph+d.tru)}</td>
+      <td class="td-num">${fmtK(cumPh2)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── WEEKLY ──────────────────────────────────────────────────────────────────
+const WEEKS = [
+  {label:'Sem 18 May 1–7',  days:MAY_DAILY.slice(0,7)},
+  {label:'Sem 19 May 8–14', days:MAY_DAILY.slice(7,14)},
+  {label:'Sem 20 May 15–21',days:MAY_DAILY.slice(14,21)},
+  {label:'Sem 21 May 22–23',days:MAY_DAILY.slice(21)},
+];
+function initWeekly(){ renderWeekly(); }
+function renderWeekly(){
+  const wi = parseInt($('week-sel').value);
+  const wk = WEEKS[wi];
+  const phSum = wk.days.reduce((a,d)=>a+d.ph,0);
+  const truSum = wk.days.reduce((a,d)=>a+d.tru,0);
+  const total = phSum+truSum;
+  $('weekly-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">PH Semana</div><div class="kpi-value">${fmtK(phSum)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">TRU Semana</div><div class="kpi-value">${fmtK(truSum)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total Canal</div><div class="kpi-value">${fmtK(total)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ticket Prom.</div><div class="kpi-value">${fmtN(KPI_OP.MAY.ticket)}</div><div class="kpi-sub">Mayo MTD</div></div>
+  `;
+  mkChart('ch-weekly-bars',{
+    type:'bar',
+    data:{labels:wk.days.map(d=>`${d.w}${d.d}`),
+      datasets:[
+        {label:'PH',data:wk.days.map(d=>d.ph),backgroundColor:'#3b82f6',borderRadius:3},
+        {label:'TRU',data:wk.days.map(d=>d.tru),backgroundColor:'#f59e0b',borderRadius:3},
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}}}}
+  });
+  // WoW
+  const wowData = WEEKS.map(w=>({
+    label:w.label.split(' ')[1]+'-'+w.label.split('–')[1]||'',
+    ph:w.days.reduce((a,d)=>a+d.ph,0),
+    tru:w.days.reduce((a,d)=>a+d.tru,0)
+  }));
+  mkChart('ch-wow',{
+    type:'bar',
+    data:{labels:WEEKS.map(w=>w.label.substring(0,7)),
+      datasets:[
+        {label:'PH',data:wowData.map(w=>w.ph),backgroundColor:'#3b82f6',borderRadius:4},
+        {label:'TRU',data:wowData.map(w=>w.tru),backgroundColor:'#f59e0b',borderRadius:4},
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}}}}
+  });
+  // Breakdown
+  $('weekly-breakdown').innerHTML = `
+    <div style="margin-bottom:12px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">${wk.label}</div>
+      <div class="bar-row"><div class="bar-label">Palacio de Hierro</div><div class="bar-outer"><div class="bar-inner" style="width:${(phSum/(phSum+truSum)*100).toFixed(0)}%;background:#3b82f6"></div></div><div class="bar-val">${fmtK(phSum)}</div><div class="bar-delta">${fmtP(phSum/(phSum+truSum)*100)}</div></div>
+      <div class="bar-row"><div class="bar-label">Toys R Us</div><div class="bar-outer"><div class="bar-inner" style="width:${(truSum/(phSum+truSum)*100).toFixed(0)}%;background:#f59e0b"></div></div><div class="bar-val">${fmtK(truSum)}</div><div class="bar-delta">${fmtP(truSum/(phSum+truSum)*100)}</div></div>
+    </div>
+    <hr class="divider">
+    <div style="font-weight:700;font-size:12px;margin-bottom:8px">Días de la semana</div>
+    ${wk.days.map(d=>`
+      <div class="bar-row">
+        <div class="bar-label">${d.w} ${d.d}/May</div>
+        <div class="bar-outer"><div class="bar-inner" style="width:${((d.ph+d.tru)/Math.max(...wk.days.map(x=>x.ph+x.tru))*100).toFixed(0)}%;background:#6b7280"></div></div>
+        <div class="bar-val">${fmtK(d.ph+d.tru)}</div>
+      </div>`).join('')}
+  `;
+}
+
+// ─── PH ENHANCED ─────────────────────────────────────────────────────────────
+let phActiveMeses = {ENE:true,FEB:true,MAR:true,ABR:true,MAY:true};
+let phActiveClient = 'PH'; // 'PH' or 'TRU' (TRU just shows summary)
+
+function togglePHMonth(m, btn){
+  phActiveMeses[m] = !phActiveMeses[m];
+  btn.classList.toggle('on', phActiveMeses[m]);
+  renderPHCharts();
+}
+function togglePHClient(c){
+  phActiveClient = c;
+  document.getElementById('ph-btn-PH').classList.toggle('on', c==='PH');
+  document.getElementById('ph-btn-TRU').classList.toggle('on', c==='TRU');
+  renderPHCharts();
+}
+function getPHActiveMeses(){ return Object.keys(phActiveMeses).filter(m=>phActiveMeses[m]); }
+
+function sumPHStore(idx, meses, field){
+  return meses.reduce((acc,m)=>acc+(PH_DATA[m]?.[field]?.[idx]||0),0);
+}
+
+function renderPHCharts(){
+  const meses = getPHActiveMeses();
+  const mode  = ($('ph-view-mode')||{value:'real'}).value;
+
+  const realSums = PH_STORES.map((_,i)=>sumPHStore(i,meses,'real'));
+  const planSums = PH_STORES.map((_,i)=>sumPHStore(i,meses,'plan'));
+  const r25Sums  = PH_STORES.map((_,i)=>sumPHStore(i,meses,'real25'));
+
+  let barData, barLabel, barColors;
+  if(mode==='vsplan'){
+    barData  = PH_STORES.map((_,i)=>planSums[i]>0?(realSums[i]/planSums[i])*100:0);
+    barLabel = '% Cumplimiento Plan';
+    barColors= barData.map(v=>v>=100?'rgba(16,185,129,.8)':v>=80?'rgba(245,158,11,.8)':'rgba(239,68,68,.8)');
+  } else if(mode==='vs2025'){
+    barData  = PH_STORES.map((_,i)=>r25Sums[i]>0?((realSums[i]/r25Sums[i])-1)*100:null);
+    barLabel = '% Var vs 2025';
+    barColors= barData.map(v=>v==null?'#ccc':v>=0?'rgba(16,185,129,.8)':'rgba(239,68,68,.8)');
+  } else {
+    barData  = realSums;
+    barLabel = 'Venta Real 2026';
+    barColors= PH_COLORS;
+  }
+
+  mkChart('ch-ph-bar',{type:'bar',data:{labels:PH_STORES,datasets:[{label:barLabel,data:barData,backgroundColor:barColors,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>mode==='real'?fmtK(c.raw):c.raw!=null?c.raw.toFixed(1)+'%':'—'}}},
+      scales:{x:{ticks:{callback:v=>mode==='real'?fmtK(v):v.toFixed(0)+'%',font:{size:9}},grid:{color:'#f3f4f6'}},y:{ticks:{font:{size:10}}}}}});
+
+  const total=realSums.reduce((a,b)=>a+b,0);
+  mkChart('ch-ph-pie',{type:'doughnut',data:{labels:PH_STORES,datasets:[{data:realSums,backgroundColor:PH_COLORS,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:9}},tooltip:{callbacks:{label:c=>c.label+': '+fmtK(c.raw)+' ('+((c.raw/total)*100).toFixed(1)+'%)'}}},cutout:'50%'}});
+
+  const lineDS = PH_STORES.map((t,i)=>({
+    label:t, data:['ENE','FEB','MAR','ABR','MAY'].map(m=>PH_DATA[m]?.real?.[i]||null),
+    borderColor:PH_COLORS[i],backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:.3
+  }));
+  mkChart('ch-ph-line',{type:'line',data:{labels:['ENE','FEB','MAR','ABR','MAY'],datasets:lineDS},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:9},boxWidth:9}}},
+      scales:{y:{ticks:{callback:v=>fmtK(v),font:{size:9}},grid:{color:'#f3f4f6'}},x:{ticks:{font:{size:9}}}}}});
+
+  // Detail table
+  const totReal=realSums.reduce((a,b)=>a+b,0);
+  const totPlan=planSums.reduce((a,b)=>a+b,0);
+  const totR25=r25Sums.reduce((a,b)=>a+b,0);
+  const tbody=$('ph-detail-tbody');
+  if(!tbody) return;
+  tbody.innerHTML=[...PH_STORES.map((t,i)=>{
+    const cumpl=planSums[i]>0?(realSums[i]/planSums[i])*100:null;
+    const vs25=r25Sums[i]>0?((realSums[i]/r25Sums[i])-1)*100:null;
+    const gap=realSums[i]-planSums[i];
+    return `<tr>
+      <td style="font-weight:600">${t}</td>
+      <td class="td-num"><b>${fmtN(realSums[i])}</b></td>
+      <td class="td-num">${fmtN(planSums[i])}</td>
+      <td class="td-num"><span style="color:${cumpl==null?'var(--muted)':cumpl>=100?'var(--green)':'var(--red)'};font-weight:700">${cumpl!=null?cumpl.toFixed(1)+'%':'—'}</span></td>
+      <td class="td-num"><span style="color:${vs25==null?'var(--muted)':vs25>=0?'var(--green)':'var(--red)'};font-weight:700">${vs25!=null?(vs25>=0?'+':'')+vs25.toFixed(1)+'%':'—'}</span></td>
+      <td class="td-num" style="color:${gap>=0?'var(--green)':'var(--red)'};font-weight:700">${gap>=0?'+':''}${fmtN(gap)}</td>
+    </tr>`;
+  }),
+  [`<tr style="background:#f9fafb;font-weight:700">
+    <td>TOTAL PH</td>
+    <td class="td-num">${fmtN(totReal)}</td>
+    <td class="td-num">${fmtN(totPlan)}</td>
+    <td class="td-num" style="color:${totPlan>0&&totReal/totPlan>=1?'var(--green)':'var(--red)'}">${totPlan>0?((totReal/totPlan)*100).toFixed(1)+'%':'—'}</td>
+    <td class="td-num" style="color:${totR25>0&&totReal>totR25?'var(--green)':'var(--red)'}">${totR25>0?(((totReal/totR25)-1)*100).toFixed(1)+'%':'—'}</td>
+    <td class="td-num" style="color:${totReal>=totPlan?'var(--green)':'var(--red)'}">${totReal>=totPlan?'+':''}${fmtN(totReal-totPlan)}</td>
+  </tr>`]].join('');
+}
+
+function initPHEnhanced(){
+  const ytdReal=MONTHLY.real26.reduce((a,b)=>a+b,0);
+  const ytdPlan=MONTHLY.plan.reduce((a,b)=>a+b,0);
+  const cumpl=ytdReal/ytdPlan*100;
+  $('ph-kpi-grid').innerHTML=`
+    <div class="kpi-card"><div class="kpi-label">Venta YTD PH</div><div class="kpi-value">${fmtM(ytdReal)}</div><div class="kpi-sub">ENE–MAY 2026 (23/5 parcial)</div><div class="kpi-delta up">↑ vs 2025: +${fmtP((ytdReal/MONTHLY.real25.reduce((a,b)=>a+b,0)-1)*100,1)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Cumplimiento YTD</div><div class="kpi-value">${fmtP(cumpl)}</div><div class="kpi-sub">vs Plan ${fmtM(ytdPlan)}</div><div class="kpi-delta ${cumpl>=100?'up':'warn'}">${cumpl>=100?'↑ Sobre plan':'⚠ Bajo plan en MAY'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Transacciones YTD</div><div class="kpi-value">${Object.values(KPI_OP).reduce((a,k)=>a+k.trans,0).toLocaleString('es-MX')}</div><div class="kpi-sub">Mayo parcial incluido</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ticket Promedio</div><div class="kpi-value">${fmtN(Math.round(Object.values(KPI_OP).reduce((a,k)=>a+k.ticket,0)/Object.keys(KPI_OP).length))}</div><div class="kpi-sub">Promedio 5 meses</div></div>
+  `;
+  renderPHCharts();
+}
+
+// ─── TENDENCIA ────────────────────────────────────────────────────────────────
+function initTendencia(){
+  const F=MONTHLY_FULL;
+  mkChart('ch-tend-main',{type:'line',data:{labels:F.labels,datasets:[
+    {label:'Real 2026',data:F.real26,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.08)',borderWidth:2.5,pointRadius:5,tension:.3,fill:true},
+    {label:'Plan Optimista',data:F.plan,borderColor:'#0f3460',backgroundColor:'transparent',borderWidth:2,borderDash:[6,3],pointRadius:3,tension:.3},
+    {label:'Real 2025',data:F.real25,borderColor:'#f59e0b',backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,tension:.3}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtM(c.raw)}}},
+    scales:{y:{ticks:{callback:v=>fmtM(v),font:{size:9}},grid:{color:'#f3f4f6'}},x:{ticks:{font:{size:9}}}}}});
+
+  const growthLabels=F.labels.filter((_,i)=>F.var_2025[i]!=null);
+  const growthVals=F.var_2025.filter(v=>v!=null).map(v=>v-100);
+  mkChart('ch-tend-growth',{type:'bar',data:{labels:growthLabels,datasets:[{label:'% Crec. vs 2025',data:growthVals,
+    backgroundColor:growthVals.map(v=>v>=0?'rgba(16,185,129,.8)':'rgba(239,68,68,.8)'),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.raw>=0?'+':'')+c.raw.toFixed(1)+'% vs 2025'}}},
+      scales:{y:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'#f3f4f6'}},x:{ticks:{font:{size:10}}}}}});
+
+  const cumplLabels=F.labels.filter((_,i)=>MONTHLY.cumpl[i]!=null);
+  const cumplVals=MONTHLY.cumpl.filter(v=>v!=null);
+  mkChart('ch-tend-cumpl',{type:'bar',data:{labels:cumplLabels,datasets:[{label:'% Cumpl. Plan',data:cumplVals,
+    backgroundColor:cumplVals.map(v=>v>=100?'rgba(16,185,129,.8)':'rgba(239,68,68,.8)'),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toFixed(1)+'% del plan'}}},
+      scales:{y:{min:50,ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'#f3f4f6'}},x:{ticks:{font:{size:10}}}}}});
+}
+
+// ─── KPIs OPERATIVOS ─────────────────────────────────────────────────────────
+let kpiActiveMeses={ENE:true,FEB:true,MAR:true,ABR:true,MAY:true};
+
+function toggleKPIMonth(m, btn){
+  kpiActiveMeses[m]=!kpiActiveMeses[m];
+  btn.classList.toggle('on',kpiActiveMeses[m]);
+  renderKPIs();
+}
+function kpiSelAll(val){
+  Object.keys(kpiActiveMeses).forEach(m=>kpiActiveMeses[m]=val);
+  document.querySelectorAll('#kpi-month-sel .month-btn').forEach(b=>b.classList.toggle('on',val));
+  renderKPIs();
+}
+
+function renderKPIs(){
+  const meses=Object.keys(kpiActiveMeses).filter(m=>kpiActiveMeses[m]);
+  const allMeses=['ENE','FEB','MAR','ABR','MAY'];
+  if(!meses.length){
+    ['kv-upt','kv-ticket','kv-att','kt-upt','kt-ticket','kt-att'].forEach(id=>{const el=$(id);if(el)el.textContent='—';});
+    return;
+  }
+  let totVenta=0,totTrans=0,totUnid=0;
+  meses.forEach(m=>{const d=KPI_OP[m];totVenta+=d.venta;totTrans+=d.trans;totUnid+=d.unid;});
+  const upt=totUnid/totTrans;
+  const ticketW=totVenta/totTrans;
+  const att=totVenta/totTrans;
+  const kvu=$(   'kv-upt');    if(kvu)kvu.textContent=upt.toFixed(1)+' u/tx';
+  const kvt=$(   'kv-ticket'); if(kvt)kvt.textContent='$'+Math.round(ticketW).toLocaleString('es-MX');
+  const kva=$(   'kv-att');    if(kva)kva.textContent='$'+Math.round(att).toLocaleString('es-MX');
+
+  function trendHtml(val,base){
+    if(!base||!val) return '';
+    const diff=((val/base)-1)*100;
+    return `<span class="${diff>=0?'trend-up':'trend-dn'}">${diff>=0?'▲':'▼'} ${Math.abs(diff).toFixed(1)}% vs primer mes</span>`;
+  }
+  const ktu=$('kt-upt'),ktt=$('kt-ticket'),kta=$('kt-att');
+  if(meses.length>1){
+    const first=KPI_OP[meses[0]],last=KPI_OP[meses[meses.length-1]];
+    if(ktu)ktu.innerHTML=trendHtml(last.unid/last.trans,first.unid/first.trans);
+    if(ktt)ktt.innerHTML=trendHtml(last.venta/last.trans,first.venta/first.trans);
+    if(kta)kta.innerHTML=trendHtml(last.venta/last.trans,first.venta/first.trans);
+  } else {
+    [ktu,ktt,kta].forEach(el=>{if(el)el.innerHTML='';});
+  }
+
+  const uptVals=allMeses.map(m=>+(KPI_OP[m].unid/KPI_OP[m].trans).toFixed(2));
+  mkChart('ch-kpi-upt',{type:'bar',data:{labels:allMeses,datasets:[
+    {label:'UPT',data:uptVals,backgroundColor:allMeses.map(m=>kpiActiveMeses[m]?'rgba(59,130,246,.8)':'rgba(200,200,200,.4)'),borderRadius:5},
+    {label:'Benchmark 4.5',data:allMeses.map(()=>4.5),type:'line',borderColor:'rgba(239,68,68,.7)',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:0}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+' u/tx'}}},
+    scales:{y:{min:3,ticks:{font:{size:9}},grid:{color:'#f3f4f6'}},x:{ticks:{font:{size:10}}}}}});
+
+  const ticketVals=allMeses.map(m=>KPI_OP[m].ticket);
+  const attVals=allMeses.map(m=>+(KPI_OP[m].venta/KPI_OP[m].trans).toFixed(0));
+  mkChart('ch-kpi-ticket',{type:'bar',data:{labels:allMeses,datasets:[
+    {label:'Ticket (portal)',data:ticketVals,backgroundColor:allMeses.map(m=>kpiActiveMeses[m]?'rgba(16,185,129,.8)':'rgba(200,200,200,.4)'),borderRadius:5,order:1},
+    {label:'ATT Calculado',data:attVals,type:'line',borderColor:'rgba(139,92,246,.9)',backgroundColor:'transparent',borderWidth:2,pointRadius:5,tension:.3,order:0}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:c=>c.dataset.label+': $'+Math.round(c.raw).toLocaleString('es-MX')}}},
+    scales:{y:{ticks:{callback:v=>'$'+v.toLocaleString('es-MX'),font:{size:9}},grid:{color:'#f3f4f6'}},x:{ticks:{font:{size:10}}}}}});
+
+  const transVals=allMeses.map(m=>KPI_OP[m].trans);
+  mkChart('ch-kpi-trans',{type:'bar',data:{labels:allMeses,datasets:[{label:'Trans.',data:transVals,backgroundColor:allMeses.map(m=>kpiActiveMeses[m]?'rgba(239,68,68,.8)':'rgba(200,200,200,.4)'),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('es-MX')+' tx'}}},
+      scales:{y:{ticks:{callback:v=>v.toLocaleString('es-MX'),font:{size:9}},grid:{color:'#f3f4f6'}},x:{ticks:{font:{size:10}}}}}});
+
+  const unidVals=allMeses.map(m=>KPI_OP[m].unid);
+  mkChart('ch-kpi-unid',{type:'bar',data:{labels:allMeses,datasets:[{label:'Unidades',data:unidVals,backgroundColor:allMeses.map(m=>kpiActiveMeses[m]?'rgba(15,52,96,.8)':'rgba(200,200,200,.4)'),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('es-MX')+' uds'}}},
+      scales:{y:{ticks:{callback:v=>v.toLocaleString('es-MX'),font:{size:9}},grid:{color:'#f3f4f6'}},x:{ticks:{font:{size:10}}}}}});
+
+  // Summary table
+  const tbody=$('kpi-summary-tbody');
+  if(!tbody) return;
+  tbody.innerHTML=allMeses.map(m=>{
+    const d=KPI_OP[m];
+    const upt_m=(d.unid/d.trans).toFixed(2);
+    const att_m=Math.round(d.venta/d.trans);
+    const act=kpiActiveMeses[m];
+    return `<tr style="${act?'':'opacity:.45'}">
+      <td><b>${m} 2026</b>${m==='MAY'?'<sup style="font-size:9px;color:var(--muted)">*</sup>':''}</td>
+      <td class="td-num">${fmtN(d.venta)}</td>
+      <td class="td-num">${d.trans.toLocaleString('es-MX')}</td>
+      <td class="td-num">${d.unid.toLocaleString('es-MX')}</td>
+      <td class="td-num">${d.skins.toLocaleString('es-MX')}</td>
+      <td class="td-num" style="color:#3b82f6;font-weight:700">${upt_m}</td>
+      <td class="td-num" style="color:#10b981;font-weight:700">$${d.ticket.toLocaleString('es-MX')}</td>
+      <td class="td-num" style="color:#8b5cf6;font-weight:700">$${att_m.toLocaleString('es-MX')}</td>
+      <td class="td-num"><span style="color:${d.cumpl>=100?'var(--green)':'var(--red)'};font-weight:700">${d.cumpl.toFixed(1)}%</span></td>
+    </tr>`;
+  }).join('')+function(){
+    const sel=allMeses.filter(m=>kpiActiveMeses[m]);
+    if(!sel.length) return '';
+    const tv=sel.reduce((a,m)=>a+KPI_OP[m].venta,0);
+    const tt=sel.reduce((a,m)=>a+KPI_OP[m].trans,0);
+    const tu=sel.reduce((a,m)=>a+KPI_OP[m].unid,0);
+    const ts=sel.reduce((a,m)=>a+KPI_OP[m].skins,0);
+    return `<tr style="background:#f0f4ff;font-weight:700">
+      <td>TOTAL Selec.</td>
+      <td class="td-num">${fmtN(tv)}</td>
+      <td class="td-num">${tt.toLocaleString('es-MX')}</td>
+      <td class="td-num">${tu.toLocaleString('es-MX')}</td>
+      <td class="td-num">${ts.toLocaleString('es-MX')}</td>
+      <td class="td-num" style="color:#3b82f6">${(tu/tt).toFixed(2)}</td>
+      <td class="td-num" style="color:#10b981">$${Math.round(tv/tt).toLocaleString('es-MX')}</td>
+      <td class="td-num" style="color:#8b5cf6">$${Math.round(tv/tt).toLocaleString('es-MX')}</td>
+      <td class="td-num">—</td>
+    </tr>`;
+  }();
+}
+function initKPIs(){ renderKPIs(); }
+
+// ─── REPORTES MENSUALES ───────────────────────────────────────────────────────
+let repActiveMes = null;
+
+function initReportes(){
+  repActiveMes = null;
+  document.querySelectorAll('#view-reportes .month-btn').forEach(b=>b.classList.remove('on'));
+  $('rep-comparative').style.display='';
+  $('rep-detail').style.display='none';
+  renderRepComparative();
+}
+
+function renderRepComparative(){
+  const tbody=$('rep-compare-tbody');
+  if(!tbody) return;
+  const allMeses=['ENE','FEB','MAR','ABR','MAY'];
+  const rows=[
+    {label:'Venta Real PH',fn:m=>fmtM(MONTHLY.real26[['ENE','FEB','MAR','ABR','MAY'].indexOf(m)])},
+    {label:'Plan Optimista',fn:m=>fmtM(MONTHLY.plan[['ENE','FEB','MAR','ABR','MAY'].indexOf(m)])},
+    {label:'Real 2025',fn:m=>fmtM(MONTHLY.real25[['ENE','FEB','MAR','ABR','MAY'].indexOf(m)])},
+    {label:'% Cumpl Plan',fn:m=>{const i=['ENE','FEB','MAR','ABR','MAY'].indexOf(m);const c=MONTHLY.cumpl[i];return `<span style="color:${c>=100?'var(--green)':'var(--red)'};font-weight:700">${c!=null?c.toFixed(1)+'%':'—'}</span>`;}},
+    {label:'% vs 2025',fn:m=>{const i=['ENE','FEB','MAR','ABR','MAY'].indexOf(m);const v=MONTHLY.var_2025[i];return v!=null?`<span style="color:var(--green);font-weight:700">+${(v-100).toFixed(1)}%</span>`:'—';}},
+    {label:'Transacciones',fn:m=>KPI_OP[m].trans.toLocaleString('es-MX')},
+    {label:'Unidades',fn:m=>KPI_OP[m].unid.toLocaleString('es-MX')},
+    {label:'UPT',fn:m=>(KPI_OP[m].unid/KPI_OP[m].trans).toFixed(2)},
+    {label:'Ticket Prom.',fn:m=>'$'+KPI_OP[m].ticket.toLocaleString('es-MX')},
+  ];
+  tbody.innerHTML=rows.map(r=>`<tr>
+    <td style="font-weight:600">${r.label}</td>
+    ${allMeses.map(m=>`<td class="td-num">${r.fn(m)}</td>`).join('')}
+  </tr>`).join('');
+}
+
+function showReporteMes(mes){
+  repActiveMes=mes;
+  document.querySelectorAll('#view-reportes .month-btn').forEach(b=>b.classList.remove('on'));
+  if(!mes){
+    $('rep-comparative').style.display='';
+    $('rep-detail').style.display='none';
+    renderRepComparative();
+    return;
+  }
+  // highlight button
+  document.querySelectorAll('#view-reportes .month-btn').forEach(b=>{
+    if(b.textContent.startsWith(mes)) b.classList.add('on');
+  });
+  $('rep-comparative').style.display='none';
+  $('rep-detail').style.display='';
+  $('rep-detail-title').textContent='Tiendas — '+mes+' 2026';
+
+  // Bar chart tiendas
+  const d=PH_DATA[mes];
+  mkChart('ch-rep-stores',{type:'bar',data:{labels:PH_STORES.map(s=>s.length>8?s.substring(0,7)+'…':s),datasets:[
+    {label:'Real 2026',data:d.real,backgroundColor:PH_COLORS.map(c=>c+'cc'),borderRadius:4},
+    {label:'Plan',data:d.plan,backgroundColor:'transparent',borderColor:PH_COLORS,borderWidth:2,borderRadius:4},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:9},boxWidth:9}}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{ticks:{callback:v=>fmtK(v),font:{size:9}}}}}});
+
+  // KPI cards for month
+  const k=KPI_OP[mes];
+  const att=Math.round(k.venta/k.trans);
+  const upt=(k.unid/k.trans).toFixed(2);
+  $('rep-kpi-cards').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="kpi-card"><div class="kpi-label">Venta PH</div><div class="kpi-value" style="font-size:18px">${fmtM(k.venta)}</div><div class="kpi-delta ${k.cumpl>=100?'up':'warn'}">${k.cumpl.toFixed(1)}% del plan</div></div>
+      <div class="kpi-card"><div class="kpi-label">Transacciones</div><div class="kpi-value" style="font-size:18px">${k.trans.toLocaleString('es-MX')}</div></div>
+      <div class="kpi-card"><div class="kpi-label">UPT</div><div class="kpi-value" style="font-size:18px;color:#3b82f6">${upt}</div><div class="kpi-sub">u/tx</div></div>
+      <div class="kpi-card"><div class="kpi-label">ATT</div><div class="kpi-value" style="font-size:18px;color:#8b5cf6">$${att.toLocaleString('es-MX')}</div></div>
+    </div>`;
+
+  // Stores detail table
+  const totReal=d.real.reduce((a,b)=>a+b,0);
+  const totPlan=d.plan.reduce((a,b)=>a+b,0);
+  const totR25=d.real25.reduce((a,b)=>a+b,0);
+  $('rep-stores-tbody').innerHTML=[...PH_STORES.map((t,i)=>{
+    const cumpl=d.plan[i]>0?(d.real[i]/d.plan[i])*100:null;
+    const vs25=d.real25[i]>0?((d.real[i]/d.real25[i])-1)*100:null;
+    const gap=d.real[i]-d.plan[i];
+    return `<tr>
+      <td style="font-weight:600">${t}</td>
+      <td class="td-num"><b>${fmtN(d.real[i])}</b></td>
+      <td class="td-num">${fmtN(d.plan[i])}</td>
+      <td class="td-num"><span style="color:${cumpl==null?'var(--muted)':cumpl>=100?'var(--green)':'var(--red)'};font-weight:700">${cumpl!=null?cumpl.toFixed(1)+'%':'—'}</span></td>
+      <td class="td-num"><span style="color:${vs25==null?'var(--muted)':vs25>=0?'var(--green)':'var(--red)'};font-weight:700">${vs25!=null?(vs25>=0?'+':'')+vs25.toFixed(1)+'%':'—'}</span></td>
+      <td class="td-num" style="color:${gap>=0?'var(--green)':'var(--red)'};font-weight:700">${gap>=0?'+':''}${fmtN(gap)}</td>
+    </tr>`;
+  }),
+  [`<tr style="background:#f9fafb;font-weight:700">
+    <td>TOTAL PH</td>
+    <td class="td-num">${fmtN(totReal)}</td>
+    <td class="td-num">${fmtN(totPlan)}</td>
+    <td class="td-num" style="color:${totReal/totPlan>=1?'var(--green)':'var(--red)'}">${((totReal/totPlan)*100).toFixed(1)}%</td>
+    <td class="td-num" style="color:${totR25>0&&totReal>totR25?'var(--green)':'var(--red)'}">${totR25>0?(((totReal/totR25)-1)*100).toFixed(1)+'%':'—'}</td>
+    <td class="td-num" style="color:${totReal>=totPlan?'var(--green)':'var(--red)'}">${totReal>=totPlan?'+':''}${fmtN(totReal-totPlan)}</td>
+  </tr>`]].join('');
+
+  // Top SKUs
+  $('rep-top-skus').innerHTML=PRODUCTS.slice(0,8).map((p,i)=>`
+    <div class="bar-row">
+      <div class="bar-label">${i+1}. ${p.art}</div>
+      <div class="bar-outer"><div class="bar-inner" style="width:${(p.venta/PRODUCTS[0].venta*100).toFixed(0)}%;background:${PH_COLORS[i%PH_COLORS.length]}"></div></div>
+      <div class="bar-val">${fmtN(p.venta)}</div>
+    </div>`).join('');
+}
+
+// ─── TRU ─────────────────────────────────────────────────────────────────────
+function initTRU(){
+  const abr=TRU_DATA[3], may=TRU_DATA[4];
+  const totalPzas=(abr.piezas||0)+(may.piezas||0);
+  const totalNeta=(abr.ventaNeta||0)+(may.ventaNeta||0);
+  const abrTicket = abr.piezas>0 ? Math.round(abr.ventaNeta/abr.piezas) : 0;
+  const mayTicket = may.piezas>0 ? Math.round(may.ventaNeta/may.piezas) : 0;
+  $('tru-kpi-grid').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Piezas Totales</div><div class="kpi-value">${totalPzas.toLocaleString('es-MX')}</div><div class="kpi-sub">ABR+MAY · Tienda 1085</div></div>
+    <div class="kpi-card"><div class="kpi-label">Venta Total</div><div class="kpi-value">${fmtK(totalNeta)}</div><div class="kpi-sub">ABR $630K + MAY $278K</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ticket Promedio ABR</div><div class="kpi-value">${fmtK(abrTicket)}</div><div class="kpi-sub">${abr.periodo} · ${abr.piezas} pzas</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ticket Promedio MAY</div><div class="kpi-value">${fmtK(mayTicket)}</div><div class="kpi-sub">${may.periodo} · ${may.piezas} pzas</div></div>
+  `;
+  // Gráfica ABR diaria TRU
+  mkChart('ch-tru-monthly',{
+    type:'bar',
+    data:{
+      labels:ABR_DAILY_TRU.map(x=>''+x.d+' ABR').concat(MAY_DAILY.map(x=>''+x.d+' MAY')),
+      datasets:[{
+        label:'Venta Diaria TRU ($)',
+        data:ABR_DAILY_TRU.map(x=>x.v).concat(MAY_DAILY.map(x=>x.tru)),
+        backgroundColor: ABR_DAILY_TRU.map(()=>'#3b82f6').concat(MAY_DAILY.map(()=>'#f59e0b')),
+        borderRadius:3
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},title:{display:true,text:'Venta Diaria TRU — Tienda 1085 (ABR-MAY 2026)'}},
+      scales:{x:{grid:{display:false},ticks:{maxRotation:60,font:{size:9}}},
+              y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}}}}
+  });
+  // Category chart (ABR estimated)
+  const cats=['PIELES','ROPA','ZAPATOS','RELLENO','ACCESORIOS'];
+  const catPcts=[52,18,12,11,7];
+  mkChart('ch-tru-cat',{
+    type:'doughnut',
+    data:{labels:cats, datasets:[{data:catPcts,backgroundColor:['#3b82f6','#8b5cf6','#f59e0b','#10b981','#06b6d4'],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}}}
+  });
+  // Top SKUs TRU — datos reales ZRTL
+  const truSkus = TRU_SKUS.slice(0,12);
+  $('tru-sku-list').innerHTML = truSkus.map((p,i)=>`
+    <div class="bar-row">
+      <div class="bar-label">${i+1}. ${p.art}</div>
+      <div class="bar-outer"><div class="bar-inner" style="width:${(p.venta/truSkus[0].venta*100).toFixed(0)}%;background:${PH_COLORS[i%PH_COLORS.length]}"></div></div>
+      <div class="bar-val">${fmtK(p.venta)}</div>
+    </div>`).join('');
+  $('tru-alerts').innerHTML = `
+    <div class="alert-card info"><div class="alert-icon">🔵</div><div class="alert-body"><div class="alert-title">TRU activo desde ABR 2026 — Datos reales ZRTL cargados</div><div class="alert-desc">Tienda 1085 · ABR (9–30): 1,791 pzas · $630,243 · MAY (1–19): 829 pzas · $277,881 · Total: 2,620 pzas · $908,124</div></div></div>
+    <div class="alert-card advertencia"><div class="alert-icon">🟡</div><div class="alert-body"><div class="alert-title">Margen TRU vs PH — Diferencia comisión</div><div class="alert-desc">TRU cobra comisión del canal. Revisar estructura de márgenes para asegurar rentabilidad mínima en las categorías ROPA y ZAPATOS que son las de menor margen.</div></div></div>
+  `;
+}
+
+// ─── INVENTARIOS ─────────────────────────────────────────────────────────────
+function initInventarios(){
+  mkChart('ch-inv-hist',{
+    type:'bar',
+    data:{labels:['0–30d','31–60d','61–90d','91–150d','151–200d','200d+'],
+      datasets:[{
+        label:'SKUs',
+        data:[8,32,48,67,55,166],
+        backgroundColor:['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#6b7280'],
+        borderRadius:4
+      }]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}},y:{title:{display:true,text:'# SKUs'}}}}
+  });
+  const sobre = PRODUCTS.filter(p=>p.cob>150);
+  $('inv-sobre-tbody').innerHTML = sobre.map(p=>`
+    <tr>
+      <td><span class="badge badge-gray">${p.sku}</span></td>
+      <td>${p.art}</td>
+      <td class="td-num">${p.inv.toLocaleString('es-MX')}</td>
+      <td class="td-num" style="color:#ef4444;font-weight:700">${p.cob}d</td>
+      <td class="td-num">~${fmtK(p.inv*p.venta/p.inv*0.4)}</td>
+      <td><button style="padding:3px 8px;background:#fef3c7;color:#d97706;border:1px solid #f59e0b;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">Liquidar</button></td>
+    </tr>`).join('');
+  $('inv-agotados-tbody').innerHTML = AGOTADOS.map(a=>`
+    <tr>
+      <td><span class="badge badge-gray">${a.sku}</span></td>
+      <td>${a.art}</td>
+      <td class="td-num text-red fw-700">${fmtN(a.venta)}</td>
+      <td><span class="badge badge-red">Sin stock</span></td>
+    </tr>`).join('');
+}
+
+// ─── SKUs ────────────────────────────────────────────────────────────────────
+function initSKUs(){
+  filterSKUs();
+  // Pareto
+  const sorted=[...PRODUCTS].sort((a,b)=>b.venta-a.venta);
+  let cum=0; const total=sorted.reduce((a,p)=>a+p.venta,0);
+  const cumPcts=sorted.map(p=>{cum+=p.venta; return (cum/total*100);});
+  mkChart('ch-pareto',{
+    type:'bar',
+    data:{labels:sorted.map(p=>p.art.substring(0,10)),
+      datasets:[
+        {type:'bar',label:'Venta',data:sorted.map(p=>p.venta),backgroundColor:'#3b82f6aa',yAxisID:'y',borderRadius:3},
+        {type:'line',label:'% Acumulado',data:cumPcts,borderColor:'#ef4444',fill:false,yAxisID:'y1',tension:.3,pointRadius:3},
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{x:{grid:{display:false}},
+        y:{ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}},
+        y1:{position:'right',min:0,max:100,ticks:{callback:v=>v+'%'},grid:{display:false}}}}
+  });
+  // Bubble
+  mkChart('ch-bubble',{
+    type:'bubble',
+    data:{datasets:PRODUCTS.map((p,i)=>({
+      label:p.art,
+      data:[{x:p.cob, y:p.venta/1000, r:Math.sqrt(p.inv)*1.5}],
+      backgroundColor:PH_COLORS[i%PH_COLORS.length]+'99',
+      borderColor:PH_COLORS[i%PH_COLORS.length],
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: Cob ${ctx.raw.x}d · $${ctx.raw.y.toFixed(0)}K`}}},
+      scales:{x:{title:{display:true,text:'Días cobertura'},grid:{color:'#f3f4f6'}},
+              y:{title:{display:true,text:'Venta ($K)'},ticks:{callback:v=>'$'+v+'K'}}}}
+  });
+}
+function filterSKUs(){
+  const q=($('sku-search')||{}).value?.toLowerCase()||'';
+  const cat=($('sku-cat')||{}).value||'';
+  const abc=($('sku-abc')||{}).value||'';
+  const trend=($('sku-trend')||{}).value||'';
+  const filtered=PRODUCTS.filter(p=>{
+    if(q && !p.sku.includes(q) && !p.art.toLowerCase().includes(q)) return false;
+    if(cat && p.cat!==cat) return false;
+    if(abc && p.abc!==abc) return false;
+    if(trend && p.trend!==trend) return false;
+    return true;
+  });
+  const tbody=$('skus-tbody');
+  if(!tbody) return;
+  const tIcons={up:'<span class="text-green">↑</span>',down:'<span class="text-red">↓</span>',stable:'<span class="text-muted">→</span>'};
+  const covColor=c=>c<=30?'#ef4444':c<=90?'#10b981':c<=150?'#f59e0b':'#ef4444';
+  tbody.innerHTML=filtered.map(p=>`<tr>
+    <td>${p.rank}</td>
+    <td><span class="badge badge-gray">${p.sku}</span></td>
+    <td style="font-weight:600">${p.art}</td>
+    <td><span class="badge badge-blue">${p.cat}</span></td>
+    <td class="td-num fw-700">${fmtN(p.venta)}</td>
+    <td class="td-num">${fmtP(p.pct)}</td>
+    <td class="td-num">${fmtP(p.margen)}</td>
+    <td class="td-num">${p.inv.toLocaleString('es-MX')}</td>
+    <td class="td-num" style="color:${covColor(p.cob)};font-weight:700">${p.cob}d</td>
+    <td><span class="badge ${p.abc==='A'?'badge-green':p.abc==='B'?'badge-blue':'badge-gray'}">${p.abc}</span></td>
+    <td>${tIcons[p.trend]||'—'}</td>
+  </tr>`).join('');
+  const cnt=$('sku-count');
+  if(cnt) cnt.textContent=`${filtered.length} SKUs`;
+}
+
+// ─── ALERTAS ─────────────────────────────────────────────────────────────────
+function renderAlertas(){
+  const lvl=($('alert-lvl')||{}).value||'';
+  const canal=($('alert-canal')||{}).value||'';
+  const cat=($('alert-cat')||{}).value||'';
+  const filtered=ALERTS.filter(a=>{
+    if(lvl && a.lvl!==lvl) return false;
+    if(canal && !a.canal.includes(canal)) return false;
+    if(cat && a.cat!==cat) return false;
+    return true;
+  });
+  const list=$('alertas-list');
+  if(!list) return;
+  list.innerHTML=filtered.length?filtered.map(a=>alertCard(a,false)).join(''):'<div style="padding:20px;text-align:center;color:var(--muted)">No hay alertas con estos filtros</div>';
+}
+
+// ─── IA CHAT ─────────────────────────────────────────────────────────────────
+function initIA(){
+  const area=$('chat-area');
+  if(!area||area.children.length>0) {
+    renderIARecs(); return;
+  }
+  addMsg('ai',`<strong>BABLAT AI Assistant</strong><br>¡Hola! Soy tu asistente de análisis. Puedo responder preguntas sobre ventas, inventarios, SKUs y tiendas. ¿En qué te ayudo hoy?`);
+  renderIARecs();
+}
+function renderIARecs(){
+  const el=$('ia-recs-full');
+  if(el) el.innerHTML=RECS.map(r=>recCard(r)).join('');
+}
+function addMsg(type, html){
+  const area=$('chat-area');
+  if(!area) return;
+  const div=document.createElement('div');
+  div.className=`msg msg-${type}`;
+  div.innerHTML=html;
+  area.appendChild(div);
+  area.scrollTop=area.scrollHeight;
+}
+function quickChat(q){ if($('chat-input')) $('chat-input').value=q; sendChat(); }
+function sendChat(){
+  const inp=$('chat-input');
+  if(!inp) return;
+  const q=inp.value.trim();
+  if(!q) return;
+  addMsg('user',q);
+  inp.value='';
+  setTimeout(()=>addMsg('ai',getAIResponse(q)),600);
+}
+function getAIResponse(q){
+  const ql=q.toLowerCase();
+  if(ql.includes('santa fe')){
+    return `<strong>Análisis Santa Fe PH — Mayo 2026</strong><br>
+    📉 Real: <strong>$223,851</strong> vs Plan: <strong>$395,623</strong><br>
+    📊 Cumplimiento: <strong style="color:#ef4444">56.6%</strong> — brecha de $171,772<br>
+    📉 Caída del <strong>37.7%</strong> vs plan — peor tienda del mes<br>
+    🔎 Causas identificadas: menor tráfico en zona, mezcla de producto desfavorable, ROPA y CALZADO underperforming<br>
+    ✅ Acción recomendada: visita de cuenta urgente, activar exhibición PELUCHE de alta rotación.`;
+  }
+  if(ql.includes('quiebre')||ql.includes('stock')||ql.includes('agotado')){
+    return `<strong>Análisis de Quiebres de Stock — P1</strong><br>
+    ⚠️ <strong>8 SKUs agotados</strong> con demanda activa comprobada<br>
+    💸 Venta perdida estimada: <strong>$195,095 YTD</strong><br>
+    🔴 Top quiebres: VESTIDO HADA UNICORNIO ($49K), CHAMARRA SHERPA ($39K), SUETER ROSA BRILLANTE ($31K)<br>
+    🟡 En riesgo inminente: PAWLETTE II (15 días) y PIJAMA ROSA (9 días)<br>
+    ✅ Prioridad: reorden P1 inmediato para top 4 SKUs + transferencia de PAWLETTE II.`;
+  }
+  if(ql.includes('ventas')||ql.includes('mayo')){
+    return `<strong>Ventas Mayo 2026 — Resumen al día 17</strong><br>
+    📦 PH Acumulado: <strong>$2,486,983</strong> (${fmtP(2486983/3557760*100)} del plan mes)<br>
+    🏪 TRU Acumulado: <strong>$271,979</strong> (01-17 MAY)<br>
+    📊 Cumplimiento PH: <strong style="color:#f59e0b">77.5%</strong> vs plan $3.56M<br>
+    📅 Faltan 14 días — recuperación posible con acciones comerciales<br>
+    🏆 Mejor tienda MAY: Polanco PH ($491K, 93.2% plan)<br>
+    ⚠️ Peor tienda MAY: Santa Fe PH ($224K, 56.6% plan)`;
+  }
+  if(ql.includes('inventario')||ql.includes('sobrestock')||ql.includes('cobertura')){
+    return `<strong>Análisis de Inventarios — Situación General</strong><br>
+    📦 Total inventario: <strong>70,726 unidades</strong> · Valor: <strong>$15.9M</strong><br>
+    📊 Cobertura promedio: <strong>155 días</strong> (ideal 60-90d)<br>
+    🔴 Sobreinventario crítico: RANA VERDE (283d), CACHORRO PUDÍN (231d), ABRAZOS FELICES (191d)<br>
+    💰 Capital inmovilizado sobrestock: <strong>~$150K</strong><br>
+    ✅ Recomendación: descuentos 25-30% en Polanco y Guadalajara para liberar capital antes de cierre de mayo.`;
+  }
+  if(ql.includes('recomend')||ql.includes('ia')){
+    return `<strong>Top 4 Recomendaciones IA — 17/05/2026</strong><br>
+    1️⃣ <strong>[Alto]</strong> Transferir PAWLETTE II antes del quiebre (15 días)<br>
+    2️⃣ <strong>[Alto]</strong> Plan de rescate Santa Fe — caída -37.7%<br>
+    3️⃣ <strong>[Medio]</strong> Liquidación 3 productos >200 días cobertura<br>
+    4️⃣ <strong>[Alto]</strong> Reorden urgente P1 — 8 SKUs agotados<br>
+    Ve la sección "Recomendaciones IA" en el panel derecho para el detalle completo.`;
+  }
+  if(ql.includes('tru')||ql.includes('toys')){
+    return `<strong>Toys R Us — Canal activo desde ABR 2026</strong><br>
+    🏪 Período ABR: 09-30 ABR · <strong>1,455 piezas · $508,777 neto</strong><br>
+    🏪 Período MAY: 01-17 MAY · <strong>713 piezas · $271,979 neto</strong><br>
+    📊 Acumulado TRU: <strong>$780,756 neto</strong><br>
+    🏆 Categorías líderes: PIELES (52%), ROPA (18%), ZAPATOS (12%)<br>
+    📈 Canal nuevo con buen arranque — proyección mes completo MAY ~$480K`;
+  }
+  // Default
+  const ytd=MONTHLY.real26.reduce((a,b)=>a+b,0);
+  return `<strong>Resumen General BABLAT — 17 Mayo 2026</strong><br>
+  💰 Venta YTD PH: <strong>$${(ytd/1e6).toFixed(2)}M</strong> · Cumpl. YTD: <strong>107%</strong><br>
+  🏪 TRU acumulado (ABR+MAY): <strong>$780K neto</strong><br>
+  ⚠️ Mayo en riesgo: 77.5% cumplimiento parcial al día 17<br>
+  🔴 8 SKUs agotados · 🟡 3 en riesgo quiebre<br>
+  📦 Sobreinventario: ~$150K capital inmovilizado<br>
+  <br>Pregúntame sobre: <em>santa fe, quiebre stock, ventas mayo, inventario, tru, recomendaciones</em>`;
+}
+
+// ─── UPLOAD ───────────────────────────────────────────────────────────────────
+function dropOver(e){ e.preventDefault(); $('dropzone').classList.add('drag'); }
+function dropLeave(e){ $('dropzone').classList.remove('drag'); }
+function dropFile(e){
+  e.preventDefault();
+  $('dropzone').classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(file) processFile(file);
+}
+function loadFile(e){
+  const file=e.target.files[0];
+  if(file) processFile(file);
+}
+function processFile(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try {
+      let preview='';
+      if(file.name.endsWith('.csv')){
+        const lines=e.target.result.split('\n').slice(0,6);
+        preview=buildPreviewTable(lines.map(l=>l.split(',')));
+      } else {
+        const wb=XLSX.read(e.target.result,{type:'binary'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const data=XLSX.utils.sheet_to_json(ws,{header:1}).slice(0,6);
+        preview=buildPreviewTable(data);
+      }
+      $('upload-preview').innerHTML=preview;
+      $('upload-status').style.display='block';
+    } catch(err){
+      $('upload-preview').innerHTML=`<div style="padding:14px;color:#ef4444">Error al procesar: ${err.message}</div>`;
+    }
+  };
+  if(file.name.endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsBinaryString(file);
+}
+function buildPreviewTable(data){
+  if(!data||!data.length) return '<div style="padding:14px;color:var(--muted)">Sin datos</div>';
+  const hdr=data[0];
+  const rows=data.slice(1);
+  return `<table><thead><tr>${hdr.map(h=>`<th>${h||''}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${hdr.map((_,i)=>`<td>${r[i]||''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  initDashboard();
+  initIA();
+});
+</script>
+</body>
+</html>
