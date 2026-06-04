@@ -603,13 +603,13 @@
       <div class="kpi-grid" style="margin-top:12px;">
         <div class="kpi-card">
           <div class="kpi-label">Venta Ayer</div>
-          <div class="kpi-value amber" id="kpi-ayer">$207K</div>
-          <div class="kpi-sub">17 May · PH+TRU</div>
+          <div class="kpi-value amber" id="kpi-ayer">$53K</div>
+          <div class="kpi-sub">31 May · PH+TRU</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">MAY MTD</div>
-          <div class="kpi-value" id="kpi-mtd">$2.49M</div>
-          <div class="kpi-sub">vs Plan $3.56M</div>
+          <div class="kpi-label">MAY (mes)</div>
+          <div class="kpi-value" id="kpi-mtd">$4.32M</div>
+          <div class="kpi-sub">PH+TRU · 121% del plan $3.56M</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Alertas Críticas</div>
@@ -618,7 +618,7 @@
         </div>
         <div class="kpi-card">
           <div class="kpi-label">UPT Mayo</div>
-          <div class="kpi-value green" id="kpi-upt">11.7</div>
+          <div class="kpi-value green" id="kpi-upt">5.0</div>
           <div class="kpi-sub">unidades / trans</div>
         </div>
       </div>
@@ -631,7 +631,7 @@
 
       <!-- Last 7 days chart -->
       <div class="card">
-        <div class="card-title">Últimos 7 días (11–17 May)</div>
+        <div class="card-title">Últimos 7 días (25–31 May)</div>
         <div class="chart-wrap">
           <canvas id="chart7d"></canvas>
         </div>
@@ -678,16 +678,16 @@
           </div>
           <div style="margin-top:14px; padding-top:14px; border-top:1px solid #f3f4f6;">
             <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-              <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total PH (1–17 May)</span>
-              <span style="font-size:13px;font-weight:800;color:var(--text);">$2,209,102</span>
+              <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total PH (1–31 May)</span>
+              <span style="font-size:13px;font-weight:800;color:var(--text);">$3,932,734</span>
             </div>
             <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-              <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total TRU (1–17 May)</span>
-              <span style="font-size:13px;font-weight:800;color:var(--text);">$277,881</span>
+              <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total TRU (1–31 May)</span>
+              <span style="font-size:13px;font-weight:800;color:var(--text);">$387,543</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #f3f4f6;">
-              <span style="font-size:12px;color:var(--text);font-weight:700;">TOTAL MTD</span>
-              <span style="font-size:14px;font-weight:800;color:var(--amber-dark);">$2,486,983</span>
+              <span style="font-size:12px;color:var(--text);font-weight:700;">TOTAL MES</span>
+              <span style="font-size:14px;font-weight:800;color:var(--amber-dark);">$4,320,277</span>
             </div>
           </div>
         </div>
@@ -885,78 +885,92 @@ const SHEETS_CONFIG = {
 
 // Monthly data
 const MONTHLY = {
-  labels: ['ENE','FEB','MAR','ABR','MAY'],
-  plan:   [5017757, 2860930, 3122750, 3413466, 3557760],
-  real25: [2185695, 1518515, 1445170, 1533400, 1609460],
-  real26: [5821692, 3319667, 3163388, 4285888, 2486983],
-  cumpl:  [116.0, 116.0, 101.3, 125.6, 77.5]
+  labels: ['ENE','FEB','MAR','ABR','MAY','JUN'],
+  plan:   [5017757, 2860930, 3122750, 3413466, 3557760, 3200000],
+  real25: [2185695, 1518515, 1445170, 1533400, 1609460, 0],
+  real26: [5821692, 3319667, 3163388, 4916131, 4320277, 127094],
+  cumpl:  [116.0, 116.0, 101.3, 144.0, 121.4, 4.0]
 };
 
 // May daily PH + TRU (real data)
-// Datos al 23 May 2026 — PH: Libro9 + CSV reporte | TRU: ZRTL_ZRETAIL5 (est. día 21-23)
+// Cierre MAY 2026 (1–31) — PH: CSV Reporte "Venta Neta s/Cupones a Rtl" | TRU: ZRTL_ZRETAIL5 W013
 let MAY_DAILY = [
-  {d:1,  w:'V',  ph:439188, tru:72993},
-  {d:2,  w:'S',  ph:270941, tru:19530},
-  {d:3,  w:'D',  ph:310486, tru:49725},
-  {d:4,  w:'L',  ph:109824, tru:9802},
-  {d:5,  w:'M',  ph:105216, tru:7132},
-  {d:6,  w:'Mi', ph:56454,  tru:10103},
-  {d:7,  w:'J',  ph:93007,  tru:11338},
-  {d:8,  w:'V',  ph:110275, tru:3871},
-  {d:9,  w:'S',  ph:183785, tru:30557},
-  {d:10, w:'D',  ph:112674, tru:8977},
-  {d:11, w:'L',  ph:55114,  tru:3593},
-  {d:12, w:'M',  ph:42207,  tru:7250},
-  {d:13, w:'Mi', ph:39668,  tru:2760},
-  {d:14, w:'J',  ph:70394,  tru:4428},
-  {d:15, w:'V',  ph:113157, tru:1616},
-  {d:16, w:'S',  ph:159299, tru:9958},
-  {d:17, w:'D',  ph:189163, tru:18347},
-  {d:18, w:'L',  ph:121246, tru:2903},
-  {d:19, w:'M',  ph:105293, tru:2999},
-  {d:20, w:'Mi', ph:92530,  tru:5909},
-  {d:21, w:'J',  ph:75000,  tru:4200},
-  {d:22, w:'V',  ph:120000, tru:7500},
-  {d:23, w:'S',  ph:141314, tru:15200}
+  {d: 1, w:'V', ph:441177, tru:72993},
+  {d: 2, w:'S', ph:271802, tru:19530},
+  {d: 3, w:'D', ph:312335, tru:49725},
+  {d: 4, w:'L', ph:111442, tru:9802},
+  {d: 5, w:'M', ph:105216, tru:7132},
+  {d: 6, w:'Mi', ph:57366, tru:10103},
+  {d: 7, w:'J', ph:93256, tru:11338},
+  {d: 8, w:'V', ph:111342, tru:3871},
+  {d: 9, w:'S', ph:187582, tru:30557},
+  {d:10, w:'D', ph:115664, tru:8977},
+  {d:11, w:'L', ph:56903, tru:3593},
+  {d:12, w:'M', ph:42207, tru:7250},
+  {d:13, w:'Mi', ph:46180, tru:2760},
+  {d:14, w:'J', ph:71748, tru:4428},
+  {d:15, w:'V', ph:114300, tru:1616},
+  {d:16, w:'S', ph:159299, tru:9958},
+  {d:17, w:'D', ph:189163, tru:18347},
+  {d:18, w:'L', ph:50985, tru:2903},
+  {d:19, w:'M', ph:45454, tru:2999},
+  {d:20, w:'Mi', ph:33467, tru:5909},
+  {d:21, w:'J', ph:58010, tru:0},
+  {d:22, w:'V', ph:84854, tru:3359},
+  {d:23, w:'S', ph:193451, tru:22658},
+  {d:24, w:'D', ph:180002, tru:12547},
+  {d:25, w:'L', ph:47088, tru:5459},
+  {d:26, w:'M', ph:51123, tru:5896},
+  {d:27, w:'Mi', ph:72814, tru:1203},
+  {d:28, w:'J', ph:67585, tru:4447},
+  {d:29, w:'V', ph:146823, tru:9473},
+  {d:30, w:'S', ph:194264, tru:17783},
+  {d:31, w:'D', ph:219831, tru:20927}
 ];
 
-// PH stores May (1-23) — real 1-17 + estimado 18-20 + CSV reporte 21-23
+// JUN 2026 — MTD días 1-2 (PH) + días 1-3 (TRU)
+let JUN_DAILY = [
+  {d: 1, w:'L', ph:64257,  tru:5933},
+  {d: 2, w:'M', ph:62837,  tru:8997},
+  {d: 3, w:'Mi', ph:0,     tru:12116}
+];
+const DAILY = JUN_DAILY; // ← cambiar a MAY_DAILY al ver mes anterior
+
+// PH stores — MAY 2026 mes completo (1-31) · CSV Reporte "Venta Neta s/Cupones a Rtl"
 let PH_STORES = ['Polanco','Santa Fe','Perisur','Durango','Guadalajara','Puebla','Querétaro','Monterrey'];
-let PH_MAY    = [639735, 283297, 608836, 187815, 528211, 405714, 454643, 0];
+let PH_MAY    = [792134, 366246, 742248, 248722, 635971, 502851, 590126, 0];
+let PH_JUN    = [20742, 8023, 25225, 12207, 16240, 17980, 14951, 0];
 let PH_PLAN   = [527535, 395623, 592846, 215334, 515948, 448060, 633621, 0];
 
-// KPIs
+// KPIs — MAY: venta y unid REALES (cierre 31/05); trans/skins/ticket aún ESTIMADOS hasta tener export POS
 let KPI_OP = {
   ENE:{trans:4612, unid:20752, skins:3440, ticket:1262, venta:5821692, cumpl:116.0},
   FEB:{trans:2437, unid:12060, skins:1797, ticket:1362, venta:3319667, cumpl:116.0},
   MAR:{trans:2353, unid:10579, skins:1779, ticket:1344, venta:3163388, cumpl:101.3},
-  ABR:{trans:2885, unid:12473, skins:2012, ticket:1267, venta:4285888, cumpl:125.6},
-  MAY:{trans:791,  unid:10399, skins:558,  ticket:1296, venta:2486983, cumpl:77.5}
+  ABR:{trans:2885, unid:12473, skins:2012, ticket:1267, venta:4285888, cumpl:144.0},
+  MAY:{trans:2361, unid:13344, skins:1653, ticket:1666, venta:3932734, cumpl:121.4},
+  JUN:{trans:0,    unid:0,     skins:0,    ticket:0,    venta:154139,  cumpl:4.0}
 };
 
-// TRU — Fuente: ZRTL_ZRETAIL5 Tienda 1085 · Actualizado 23 May 2026 (día 21-23 estimado)
+// TRU — Fuente: ZRTL_ZRETAIL5 Tienda 1085 · Cierre 31 May 2026 (1–31 May completo)
 const TRU = {
-  abr: {periodo:'09–30 ABR', piezas:1791, venta:630243},
-  may: {periodo:'01–23 MAY', piezas:895,  venta:310683}
+  abr: {periodo:'09–30 ABR', piezas:3213, venta:630243},
+  may: {periodo:'01–31 MAY', piezas:1147,  venta:387543},
+  jun: {periodo:'01–03 JUN', piezas:88,    venta:27045}
 };
 
-// Top SKUs — Fuente: CSV Reporte PH + ZRTL TRU · Actualizado 23 May 2026
+// Top SKUs — Fuente: CSV Reporte PH + ZRTL TRU · Actualizado 4 Jun 2026
 const TOP_SKUS = [
-  {rank:1,  art:'TEDDY',                    ph_may:37130, tru_ytd:52701, total:745976, abc:'A'},
-  {rank:2,  art:'PAWLETTE',                 ph_may:34554, tru_ytd:51376, total:742214, abc:'A'},
-  {rank:3,  art:'ACC GRABA MENSAJE',        ph_may:29315, tru_ytd:40133, total:591687, abc:'A'},
-  {rank:4,  art:'ACC CORAZÓN Q LATE',       ph_may:27906, tru_ytd:36020, total:506887, abc:'A'},
-  {rank:5,  art:'PAWLETTE COLORES PASTEL',  ph_may:23475, tru_ytd:0,     total:481524, abc:'A'},
-  {rank:6,  art:'ABRAZOS FELICES',          ph_may:23014, tru_ytd:13251, total:440448, abc:'A'},
-  {rank:7,  art:'AJOLOTE',                  ph_may:12057, tru_ytd:31865, total:370419, abc:'A'},
-  {rank:8,  art:'CACHORRO BROWNIE',         ph_may:8485,  tru_ytd:34940, total:327099, abc:'A'},
-  {rank:9,  art:'TUTU PASTEL ARCOIRIS',     ph_may:5619,  tru_ytd:12372, total:0,      abc:'A'},
-  {rank:10, art:'CACHORRO JUGUETÓN',        ph_may:5303,  tru_ytd:15778, total:0,      abc:'A'},
-  {rank:11, art:'KITTY',                    ph_may:4520,  tru_ytd:28927, total:0,      abc:'A'},
-  {rank:12, art:'PIJAMA SATIN ROJA',        ph_may:4447,  tru_ytd:0,     total:0,      abc:'A'},
-  {rank:13, art:'MONO SONRIENTE',           ph_may:4133,  tru_ytd:22706, total:234574, abc:'A'},
-  {rank:14, art:'CALZADO CANVAS',           ph_may:3866,  tru_ytd:15192, total:168178, abc:'A'},
-  {rank:15, art:'GRAN ELEFANTE',            ph_may:3824,  tru_ytd:13326, total:170507, abc:'A'},
+  {rank: 1, art:'GRABA MENSAJE'                 , ph_may:  2750, tru_ytd: 22550, total:  25300, abc:'A'},
+  {rank: 2, art:'TEDDY'                         , ph_may:  1516, tru_ytd: 21217, total:  22733, abc:'A'},
+  {rank: 3, art:'CACHORRO BROWNIE'              , ph_may:   998, tru_ytd: 20465, total:  21463, abc:'A'},
+  {rank: 4, art:'CORAZON QUE LATE'              , ph_may:  2576, tru_ytd: 13524, total:  16099, abc:'A'},
+  {rank: 5, art:'CACHORRO PUDIN'                , ph_may:   499, tru_ytd: 10981, total:  11480, abc:'A'},
+  {rank: 6, art:'KITTY'                         , ph_may:  1291, tru_ytd: 10331, total:  11622, abc:'B'},
+  {rank: 7, art:'MONO SONRIENTE'                , ph_may:  1378, tru_ytd:  9643, total:  11021, abc:'B'},
+  {rank: 8, art:'OSO ARCOIRIS'                  , ph_may:     0, tru_ytd:  9507, total:   9507, abc:'B'},
+  {rank: 9, art:'CACHORRO JUGUETON'             , ph_may:     0, tru_ytd:  7955, total:   7955, abc:'C'},
+  {rank:10, art:'RANA VERDE'                    , ph_may:   758, tru_ytd:  6820, total:   7578, abc:'C'},
 ];
 
 // Alerts
@@ -967,7 +981,7 @@ const ALERTS = [
   {lvl:'advertencia', title:'PAWLETTE II — riesgo quiebre (15d)',      desc:'Solo 42 uds · SKU #9 en ventas'},
   {lvl:'advertencia', title:'PIJAMA ROSA — quiebre inminente (9d)',    desc:'Solo 25 uds · Alto margen 34.9%'},
   {lvl:'advertencia', title:'Sobreinventario — RANA VERDE (283d)',     desc:'Capital inmovilizado ~$75K'},
-  {lvl:'info',        title:'MAY 2026 — Actualizado día 23',            desc:'PH $3.12M · TRU $311K · Total $3.43M acumulado · Inv 62,521 uds'},
+  {lvl:'info',        title:'MAY 2026 — Cierre 31 May', desc:'PH $3.93M · TRU $388K · Total $4.32M · Cumpl 121% del plan · 13,344 uds PH + 1,147 uds TRU'},
 ];
 
 /* ============================================================
@@ -1121,7 +1135,7 @@ function buildInicio() {
   }).join('');
 
   // Last 7 days chart (days 11-17)
-  const last7 = MAY_DAILY.slice(-7);
+  const last7 = DAILY.slice(-7);
   destroyChart('chart7d');
   const ctx = document.getElementById('chart7d').getContext('2d');
   charts['chart7d'] = new Chart(ctx, {
@@ -1152,11 +1166,11 @@ function buildInicio() {
   });
 
   // KPI values
-  const ayer = MAY_DAILY[MAY_DAILY.length - 1];
+  const ayer = DAILY[DAILY.length - 1];
   if (ayer) {
     document.getElementById('kpi-ayer').textContent = fmtMXN(ayer.ph + ayer.tru);
   }
-  const mtd = MAY_DAILY.reduce((s, d) => s + d.ph + d.tru, 0);
+  const mtd = DAILY.reduce((s, d) => s + d.ph + d.tru, 0);
   document.getElementById('kpi-mtd').textContent = fmtMXN(mtd);
 
   // Alerts preview
@@ -1183,17 +1197,17 @@ function buildVentas() {
   charts['chartDiario'] = new Chart(ctxD, {
     type: 'bar',
     data: {
-      labels: MAY_DAILY.map(d => d.w + d.d),
+      labels: DAILY.map(d => d.w + d.d),
       datasets: [
         {
           label: 'PH',
-          data: MAY_DAILY.map(d => d.ph),
+          data: DAILY.map(d => d.ph),
           backgroundColor: '#f59e0b',
           borderRadius: 3
         },
         {
           label: 'TRU',
-          data: MAY_DAILY.map(d => d.tru),
+          data: DAILY.map(d => d.tru),
           backgroundColor: '#1d4ed8',
           borderRadius: 3
         }
@@ -1282,7 +1296,7 @@ function buildTiendas() {
   // PH Bars
   const barsEl = document.getElementById('phBars');
   barsEl.innerHTML = PH_STORES.map((s, i) => {
-    const pct = Math.round(PH_MAY[i] / PH_PLAN[i] * 100);
+    const pct = Math.round(PH_JUN[i] / PH_PLAN[i] * 100);
     const fill = Math.min(pct, 100);
     const color = storeBarColor(pct);
     return `<div class="store-bar-item">
@@ -1299,12 +1313,12 @@ function buildTiendas() {
   // PH Table
   const ptbody = document.getElementById('phTableBody');
   ptbody.innerHTML = PH_STORES.map((s, i) => {
-    const pct = Math.round(PH_MAY[i] / PH_PLAN[i] * 100);
+    const pct = Math.round(PH_JUN[i] / PH_PLAN[i] * 100);
     const cl  = pct >= 100 ? 'green' : pct >= 80 ? 'amber' : 'red';
-    const gap = PH_MAY[i] - PH_PLAN[i];
+    const gap = PH_JUN[i] - PH_PLAN[i];
     return `<tr>
       <td style="font-weight:600;">${s}</td>
-      <td class="num">${fmtMXN(PH_MAY[i])}</td>
+      <td class="num">${fmtMXN(PH_JUN[i])}</td>
       <td class="num" style="color:var(--text-muted);">${fmtMXN(PH_PLAN[i])}</td>
       <td class="num"><span class="badge ${cl}">${pct}%</span></td>
     </tr>`;
@@ -1558,16 +1572,4 @@ if ('serviceWorker' in navigator) {
 
 /* ============================================================
    INIT
-   ============================================================ */
-document.addEventListener('DOMContentLoaded', () => {
-  built['inicio'] = true;
-  buildInicio();
-  updateSyncChip(false, null);
-  // Auto-sync if enabled
-  if (SHEETS_CONFIG.enabled) {
-    loadFromSheets();
-  }
-});
-</script>
-</body>
-</html>
+   =================================================
