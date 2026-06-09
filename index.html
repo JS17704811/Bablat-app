@@ -10,1520 +10,1005 @@
   <title>BABLAT · Sistema de Ventas</title>
   <link rel="manifest" href="./manifest.json"/>
   <link rel="icon" href="./icon.svg" type="image/svg+xml"/>
-
-  <!-- GOOGLE SHEETS SETUP
-  ==========================================
-  Para conectar Google Sheets:
-  1. Crea una hoja con tabs: DIARIO, TIENDAS, KPIS
-  2. Ve a Archivo > Compartir > Publicar en la web > CSV
-  3. Copia el ID de tu hoja (URL entre /d/ y /edit)
-  4. Cambia SHEETS_CONFIG.enabled = true
-  5. Reemplaza YOUR_SHEET_ID con tu ID real
-
-  Formato esperado de cada tab:
-  - DIARIO: dia, dia_semana, ph_venta, tru_venta
-  - TIENDAS: tienda, real, plan
-  - KPIS: mes, trans, unid, skins, ticket, venta, cumpl
-  ==========================================
-  -->
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
   <style>
-    /* ===== RESET & BASE ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --amber: #f59e0b;
-      --amber-light: #fcd34d;
-      --amber-dark: #d97706;
-      --bg: #111827;
-      --bg2: #1f2937;
-      --bg3: #374151;
-      --card: #ffffff;
-      --text: #111827;
-      --text-muted: #6b7280;
-      --text-light: #9ca3af;
-      --red: #ef4444;
-      --green: #10b981;
-      --blue: #3b82f6;
-      --yellow: #f59e0b;
-      --nav-h: 64px;
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --amber: #f59e0b; --amber-light: #fcd34d; --amber-dark: #d97706;
+      --bg: #111827; --bg2: #1f2937; --bg3: #374151;
+      --card: #ffffff; --text: #111827; --text-muted: #6b7280; --text-light: #9ca3af;
+      --red: #ef4444; --green: #10b981; --blue: #3b82f6; --yellow: #f59e0b;
+      --purple: #8b5cf6;
+      --nav-h: 64px; --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
+    html, body { height:100%; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); -webkit-tap-highlight-color:transparent; }
+    #app { display:flex; flex-direction:column; height:100%; max-width:480px; margin:0 auto; position:relative; }
+    .status-bar { background:var(--bg); height:env(safe-area-inset-top,0px); min-height:0; flex-shrink:0; }
 
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      -webkit-tap-highlight-color: transparent;
-    }
+    /* TOP HEADER */
+    .top-header { background:var(--bg); padding:14px 16px 10px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .top-header .logo { display:flex; align-items:center; gap:10px; }
+    .logo-icon { width:36px; height:36px; border-radius:10px; background:var(--amber); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; color:#111; letter-spacing:-1px; }
+    .logo-text { font-size:17px; font-weight:700; color:white; letter-spacing:0.5px; }
+    .logo-sub { font-size:11px; color:var(--text-light); margin-top:1px; }
+    .header-right { display:flex; align-items:center; gap:8px; }
+    .sync-btn { width:36px; height:36px; border-radius:10px; background:rgba(245,158,11,0.15); border:none; color:var(--amber); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .2s; flex-shrink:0; }
+    .sync-btn:active { background:rgba(245,158,11,0.3); }
+    .sync-btn.spinning { animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .sync-chip { font-size:11px; padding:4px 8px; border-radius:20px; font-weight:600; white-space:nowrap; }
+    .sync-chip.ok  { background:rgba(16,185,129,.15); color:#10b981; }
+    .sync-chip.off { background:rgba(156,163,175,.15); color:#9ca3af; }
 
-    /* ===== APP SHELL ===== */
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      max-width: 480px;
-      margin: 0 auto;
-      position: relative;
-    }
+    /* CONTENT */
+    #content { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; background:#f3f4f6; padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 8px); }
+    #content::-webkit-scrollbar { display:none; } #content { scrollbar-width:none; }
 
-    /* ===== STATUS BAR AREA ===== */
-    .status-bar {
-      background: var(--bg);
-      height: env(safe-area-inset-top, 0px);
-      min-height: 0;
-      flex-shrink: 0;
-    }
+    /* TAB PANELS */
+    .tab-panel { display:none; padding:12px 0; }
+    .tab-panel.active { display:block; }
 
-    /* ===== TOP HEADER ===== */
-    .top-header {
-      background: var(--bg);
-      padding: 14px 16px 10px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .top-header .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .top-header .logo-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      background: var(--amber);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      font-weight: 900;
-      color: #111;
-      letter-spacing: -1px;
-    }
-    .top-header .logo-text {
-      font-size: 17px;
-      font-weight: 700;
-      color: white;
-      letter-spacing: 0.5px;
-    }
-    .top-header .logo-sub {
-      font-size: 11px;
-      color: var(--text-light);
-      margin-top: 1px;
-    }
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .sync-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      background: rgba(245,158,11,0.15);
-      border: none;
-      color: var(--amber);
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-      flex-shrink: 0;
-    }
-    .sync-btn:active { background: rgba(245,158,11,0.3); }
-    .sync-btn.spinning { animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* CARDS */
+    .card { background:var(--card); border-radius:16px; padding:16px; margin:0 12px 12px; box-shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04); }
+    .card-title { font-size:13px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:12px; }
 
-    .sync-chip {
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 20px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    .sync-chip.ok   { background: rgba(16,185,129,0.15); color: #10b981; }
-    .sync-chip.off  { background: rgba(156,163,175,0.15); color: #9ca3af; }
+    /* KPI GRID */
+    .kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 12px 12px; }
+    .kpi-card { background:var(--card); border-radius:14px; padding:14px 12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .kpi-card .kpi-label { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+    .kpi-card .kpi-value { font-size:22px; font-weight:800; color:var(--text); line-height:1; margin-bottom:4px; }
+    .kpi-card .kpi-value.amber { color:var(--amber-dark); }
+    .kpi-card .kpi-value.red   { color:var(--red); }
+    .kpi-card .kpi-value.green { color:var(--green); }
+    .kpi-card .kpi-value.blue  { color:var(--blue); }
+    .kpi-card .kpi-sub { font-size:11px; color:var(--text-light); }
 
-    /* ===== CONTENT AREA ===== */
-    #content {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      -webkit-overflow-scrolling: touch;
-      background: #f3f4f6;
-      padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 8px);
-    }
+    /* CUMPLIMIENTO CIRCLES */
+    .cumpl-row { display:flex; justify-content:space-around; align-items:center; padding:4px 0; }
+    .cumpl-item { display:flex; flex-direction:column; align-items:center; gap:5px; }
+    .cumpl-circle { width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:white; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+    .cumpl-circle.over  { background:linear-gradient(135deg,#10b981,#059669); }
+    .cumpl-circle.near  { background:linear-gradient(135deg,#f59e0b,#d97706); }
+    .cumpl-circle.under { background:linear-gradient(135deg,#ef4444,#dc2626); }
+    .cumpl-label { font-size:11px; font-weight:700; color:var(--text-muted); }
 
-    /* ===== TAB PANELS ===== */
-    .tab-panel { display: none; padding: 12px 0; }
-    .tab-panel.active { display: block; }
+    /* YTD BANNER */
+    .ytd-banner { background:linear-gradient(135deg,#1e3a5f,#1d4ed8); border-radius:16px; padding:14px 16px; margin:0 12px 12px; color:white; display:flex; justify-content:space-between; align-items:center; }
+    .ytd-banner .ytd-label { font-size:11px; font-weight:700; opacity:.8; text-transform:uppercase; letter-spacing:.5px; }
+    .ytd-banner .ytd-value { font-size:24px; font-weight:900; margin:2px 0; }
+    .ytd-banner .ytd-sub { font-size:11px; opacity:.75; }
+    .ytd-banner .ytd-right { text-align:right; }
+    .ytd-badge { background:rgba(255,255,255,.2); padding:4px 10px; border-radius:20px; font-size:12px; font-weight:800; color:white; }
 
-    /* ===== CARDS ===== */
-    .card {
-      background: var(--card);
-      border-radius: 16px;
-      padding: 16px;
-      margin: 0 12px 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-    }
-    .card-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 12px;
-    }
+    /* CHART */
+    .chart-wrap { position:relative; width:100%; }
+    .chart-wrap canvas { max-height:220px; }
 
-    /* ===== KPI GRID ===== */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin: 0 12px 12px;
-    }
-    .kpi-card {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 14px 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-    .kpi-card .kpi-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-    }
-    .kpi-card .kpi-value {
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--text);
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-    .kpi-card .kpi-value.amber { color: var(--amber-dark); }
-    .kpi-card .kpi-value.red   { color: var(--red); }
-    .kpi-card .kpi-value.green { color: var(--green); }
-    .kpi-card .kpi-sub {
-      font-size: 11px;
-      color: var(--text-light);
-    }
+    /* TOGGLE */
+    .toggle-row { display:flex; background:#f3f4f6; border-radius:10px; padding:3px; margin-bottom:14px; }
+    .toggle-btn { flex:1; padding:7px 4px; border:none; border-radius:8px; background:transparent; font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; transition:all .2s; }
+    .toggle-btn.active { background:white; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
-    /* ===== CUMPLIMIENTO CIRCLES ===== */
-    .cumpl-row {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      padding: 4px 0;
-    }
-    .cumpl-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-    }
-    .cumpl-circle {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 800;
-      color: white;
-      position: relative;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
-    .cumpl-circle.over  { background: linear-gradient(135deg, #10b981, #059669); }
-    .cumpl-circle.near  { background: linear-gradient(135deg, #f59e0b, #d97706); }
-    .cumpl-circle.under { background: linear-gradient(135deg, #ef4444, #dc2626); }
-    .cumpl-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-    }
+    /* TABLES */
+    .data-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .data-table th { text-align:left; padding:6px 4px; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid #f3f4f6; }
+    .data-table td { padding:8px 4px; border-bottom:1px solid #f9fafb; color:var(--text); vertical-align:middle; }
+    .data-table tr:last-child td { border-bottom:none; }
+    .data-table .num { text-align:right; font-weight:600; font-variant-numeric:tabular-nums; }
+    .badge { display:inline-block; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700; }
+    .badge.green  { background:rgba(16,185,129,.12); color:#059669; }
+    .badge.amber  { background:rgba(245,158,11,.12);  color:#d97706; }
+    .badge.red    { background:rgba(239,68,68,.12);   color:#dc2626; }
+    .badge.blue   { background:rgba(59,130,246,.12);  color:#2563eb; }
 
-    /* ===== CHART CONTAINERS ===== */
-    .chart-wrap { position: relative; width: 100%; }
-    .chart-wrap canvas { max-height: 220px; }
+    /* MONTH SELECTOR */
+    .month-selector { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; margin-bottom:14px; }
+    .month-selector::-webkit-scrollbar { display:none; }
+    .month-btn { flex-shrink:0; padding:7px 14px; border:2px solid #e5e7eb; border-radius:20px; background:white; font-size:12px; font-weight:700; color:var(--text-muted); cursor:pointer; transition:all .2s; }
+    .month-btn.active { border-color:var(--amber); background:var(--amber); color:#111; }
 
-    /* ===== TOGGLE ===== */
-    .toggle-row {
-      display: flex;
-      background: #f3f4f6;
-      border-radius: 10px;
-      padding: 3px;
-      margin-bottom: 14px;
-    }
-    .toggle-btn {
-      flex: 1;
-      padding: 8px;
-      border: none;
-      border-radius: 8px;
-      background: transparent;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .toggle-btn.active {
-      background: white;
-      color: var(--text);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
+    /* BIG METRICS */
+    .big-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+    .big-metric { background:#f9fafb; border-radius:12px; padding:12px 8px; text-align:center; border:1px solid #f3f4f6; }
+    .big-metric .bm-label { font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+    .big-metric .bm-value { font-size:20px; font-weight:900; color:var(--amber-dark); line-height:1; }
+    .big-metric .bm-sub { font-size:10px; color:var(--text-light); margin-top:4px; }
 
-    /* ===== TABLES ===== */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-    .data-table th {
-      text-align: left;
-      padding: 6px 4px;
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 1px solid #f3f4f6;
-    }
-    .data-table td {
-      padding: 8px 4px;
-      border-bottom: 1px solid #f9fafb;
-      color: var(--text);
-      vertical-align: middle;
-    }
-    .data-table tr:last-child td { border-bottom: none; }
-    .data-table .num { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+    /* CATEGORY BREAKDOWN */
+    .cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+    .cat-card { border-radius:12px; padding:12px; border:1px solid #e5e7eb; }
+    .cat-card .cc-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
+    .cat-card .cc-units { font-size:20px; font-weight:900; line-height:1; }
+    .cat-card .cc-venta { font-size:11px; color:var(--text-muted); margin-top:3px; }
+    .cat-card .cc-pct   { font-size:11px; font-weight:700; margin-top:2px; }
+    .cat-bar { height:5px; border-radius:3px; margin-top:6px; transition:width .6s; }
+    .cat-piel    { background:#f59e0b; }
+    .cat-ropa    { background:#8b5cf6; }
+    .cat-acc     { background:#3b82f6; }
+    .cat-relleno { background:#10b981; }
 
-    .badge {
-      display: inline-block;
-      padding: 2px 7px;
-      border-radius: 20px;
-      font-size: 10px;
-      font-weight: 700;
-    }
-    .badge.green { background: rgba(16,185,129,0.12); color: #059669; }
-    .badge.amber { background: rgba(245,158,11,0.12); color: #d97706; }
-    .badge.red   { background: rgba(239,68,68,0.12);  color: #dc2626; }
+    /* STORE BARS */
+    .store-bar-item { margin-bottom:12px; }
+    .store-bar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:12px; }
+    .store-bar-name { font-weight:700; color:var(--text); }
+    .store-bar-pct  { font-weight:700; font-size:12px; }
+    .store-bar-real { font-size:11px; color:var(--text-muted); }
+    .store-bar-track { height:8px; background:#f3f4f6; border-radius:4px; overflow:hidden; }
+    .store-bar-fill  { height:100%; border-radius:4px; transition:width .6s ease; }
 
-    /* ===== SECTION DIVIDER ===== */
-    .section-divider {
-      margin: 4px 12px 12px;
-      padding: 10px 0 4px;
-      border-top: 1px solid #e5e7eb;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-    }
+    /* TRU CARDS */
+    .tru-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
+    .tru-card { background:#f9fafb; border-radius:12px; padding:12px 10px; border:1px solid #f3f4f6; }
+    .tru-card .tc-period { font-size:10px; color:var(--text-light); margin-bottom:6px; font-weight:600; }
+    .tru-card .tc-value  { font-size:17px; font-weight:800; color:var(--text); margin-bottom:3px; }
+    .tru-card .tc-sub    { font-size:10px; color:var(--text-muted); }
 
-    /* ===== KPI SELECTOR ===== */
-    .month-selector {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      scrollbar-width: none;
-      margin-bottom: 14px;
-    }
-    .month-selector::-webkit-scrollbar { display: none; }
-    .month-btn {
-      flex-shrink: 0;
-      padding: 7px 14px;
-      border: 2px solid #e5e7eb;
-      border-radius: 20px;
-      background: white;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .month-btn.active {
-      border-color: var(--amber);
-      background: var(--amber);
-      color: #111;
-    }
+    /* ALERTS */
+    .alert-count-bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .alert-count-chip { padding:5px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+    .alert-count-chip.critica     { background:rgba(239,68,68,.1);  color:#dc2626; }
+    .alert-count-chip.advertencia { background:rgba(245,158,11,.1); color:#d97706; }
+    .alert-count-chip.info        { background:rgba(59,130,246,.1); color:#2563eb; }
+    .alert-item { display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid #f3f4f6; }
+    .alert-item:last-child { border-bottom:none; }
+    .alert-border-left { border-left:3px solid; padding-left:10px; flex:1; }
+    .alert-border-left.critica     { border-color:#ef4444; }
+    .alert-border-left.advertencia { border-color:#f59e0b; }
+    .alert-border-left.info        { border-color:#3b82f6; }
+    .alert-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:3px; }
+    .alert-desc  { font-size:12px; color:var(--text-muted); line-height:1.4; }
+    .alert-preview-item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f9fafb; cursor:pointer; }
+    .alert-preview-item:last-child { border-bottom:none; }
 
-    /* ===== BIG METRIC CARDS ===== */
-    .big-metrics {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-    .big-metric {
-      background: #f9fafb;
-      border-radius: 12px;
-      padding: 12px 8px;
-      text-align: center;
-      border: 1px solid #f3f4f6;
-    }
-    .big-metric .bm-label {
-      font-size: 10px;
-      color: var(--text-muted);
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      margin-bottom: 6px;
-    }
-    .big-metric .bm-value {
-      font-size: 20px;
-      font-weight: 900;
-      color: var(--amber-dark);
-      line-height: 1;
-    }
-    .big-metric .bm-sub {
-      font-size: 10px;
-      color: var(--text-light);
-      margin-top: 4px;
-    }
+    /* BOTTOM NAV */
+    .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; height:calc(var(--nav-h) + var(--safe-bottom)); background:white; border-top:1px solid #e5e7eb; display:flex; align-items:flex-start; padding-top:6px; z-index:100; box-shadow:0 -2px 16px rgba(0,0,0,.08); }
+    .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 4px; cursor:pointer; border:none; background:transparent; transition:all .15s; -webkit-tap-highlight-color:transparent; }
+    .nav-icon  { font-size:22px; line-height:1; transition:transform .15s; }
+    .nav-label { font-size:10px; font-weight:600; color:var(--text-light); transition:color .15s; letter-spacing:.2px; }
+    .nav-item.active .nav-label { color:var(--amber-dark); }
+    .nav-item.active .nav-icon  { transform:scale(1.12); }
 
-    /* ===== ALERTS ===== */
-    .alert-count-bar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-    .alert-count-chip {
-      padding: 5px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .alert-count-chip.critica    { background: rgba(239,68,68,0.1);  color: #dc2626; }
-    .alert-count-chip.advertencia{ background: rgba(245,158,11,0.1); color: #d97706; }
-    .alert-count-chip.info       { background: rgba(59,130,246,0.1); color: #2563eb; }
+    /* TOAST */
+    .toast { position:fixed; bottom:calc(var(--nav-h) + var(--safe-bottom) + 12px); left:50%; transform:translateX(-50%) translateY(20px); background:#1f2937; color:white; padding:10px 18px; border-radius:20px; font-size:13px; font-weight:600; opacity:0; transition:all .3s; z-index:200; white-space:nowrap; pointer-events:none; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-    .alert-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid #f3f4f6;
-    }
-    .alert-item:last-child { border-bottom: none; }
-    .alert-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      margin-top: 3px;
-      flex-shrink: 0;
-    }
-    .alert-dot.critica     { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
-    .alert-dot.advertencia { background: #f59e0b; }
-    .alert-dot.info        { background: #3b82f6; }
-    .alert-body { flex: 1; }
-    .alert-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-    .alert-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
-    .alert-border-left {
-      border-left: 3px solid;
-      padding-left: 10px;
-    }
-    .alert-border-left.critica     { border-color: #ef4444; }
-    .alert-border-left.advertencia { border-color: #f59e0b; }
-    .alert-border-left.info        { border-color: #3b82f6; }
-
-    /* ===== ALERT PREVIEW (Inicio) ===== */
-    .alert-preview-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 0;
-      border-bottom: 1px solid #f9fafb;
-      cursor: pointer;
-    }
-    .alert-preview-item:last-child { border-bottom: none; }
-
-    /* ===== TRU CARDS ===== */
-    .tru-cards {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .tru-card {
-      background: #f9fafb;
-      border-radius: 12px;
-      padding: 14px 12px;
-      border: 1px solid #f3f4f6;
-    }
-    .tru-card .tc-period { font-size: 11px; color: var(--text-light); margin-bottom: 8px; }
-    .tru-card .tc-value  { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
-    .tru-card .tc-sub    { font-size: 11px; color: var(--text-muted); }
-
-    /* ===== BOTTOM NAV ===== */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 480px;
-      height: calc(var(--nav-h) + var(--safe-bottom));
-      background: white;
-      border-top: 1px solid #e5e7eb;
-      display: flex;
-      align-items: flex-start;
-      padding-top: 6px;
-      z-index: 100;
-      box-shadow: 0 -2px 16px rgba(0,0,0,0.08);
-    }
-    .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      padding: 6px 4px;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      transition: all 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .nav-icon {
-      font-size: 22px;
-      line-height: 1;
-      transition: transform 0.15s;
-    }
-    .nav-label {
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--text-light);
-      transition: color 0.15s;
-      letter-spacing: 0.2px;
-    }
-    .nav-item.active .nav-label { color: var(--amber-dark); }
-    .nav-item.active .nav-icon  { transform: scale(1.12); }
-
-    /* ===== HORIZONTAL BAR STORE ===== */
-    .store-bar-item {
-      margin-bottom: 12px;
-    }
-    .store-bar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 4px;
-      font-size: 12px;
-    }
-    .store-bar-name { font-weight: 700; color: var(--text); }
-    .store-bar-pct  { font-weight: 700; font-size: 12px; }
-    .store-bar-track {
-      height: 8px;
-      background: #f3f4f6;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .store-bar-fill {
-      height: 100%;
-      border-radius: 4px;
-      transition: width 0.6s ease;
-    }
-
-    /* ===== LOADING SKELETON ===== */
-    .skeleton {
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 8px;
-    }
-    @keyframes shimmer { to { background-position: -200% 0; } }
-
-    /* ===== SCROLLBAR ===== */
-    #content::-webkit-scrollbar { display: none; }
-    #content { scrollbar-width: none; }
-
-    /* ===== TOAST ===== */
-    .toast {
-      position: fixed;
-      bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px);
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: #1f2937;
-      color: white;
-      padding: 10px 18px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-      opacity: 0;
-      transition: all 0.3s;
-      z-index: 200;
-      white-space: nowrap;
-      pointer-events: none;
-    }
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
+    /* MISC */
+    .section-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px; }
+    .divider { border:none; border-top:1px solid #f3f4f6; margin:12px 0; }
+    .tag { display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:700; background:#fef3c7; color:#92400e; }
   </style>
 </head>
 <body>
 <div id="app">
   <div class="status-bar"></div>
 
-  <!-- Top header -->
   <div class="top-header">
     <div class="logo">
       <div class="logo-icon">BB</div>
       <div>
         <div class="logo-text">BABLAT · Dashboard</div>
-        <div class="logo-sub">Build-A-Bear Mexico</div>
+        <div class="logo-sub">Build-A-Bear Mexico · Actualizado 4 Jun 2026</div>
       </div>
     </div>
     <div class="header-right">
-      <span class="sync-chip off" id="syncChip">Sin conexión</span>
+      <span class="sync-chip off" id="syncChip">Local</span>
       <button class="sync-btn" id="syncBtn" onclick="syncData()" title="Sincronizar">🔄</button>
     </div>
   </div>
 
-  <!-- Scrollable content -->
   <div id="content">
 
-    <!-- ==================== TAB 1: INICIO ==================== -->
+    <!-- ===== TAB 1: INICIO ===== -->
     <div class="tab-panel active" id="tab-inicio">
 
-      <!-- KPI 2x2 -->
-      <div class="kpi-grid" style="margin-top:12px;">
-        <div class="kpi-card">
-          <div class="kpi-label">Venta Ayer</div>
-          <div class="kpi-value amber" id="kpi-ayer">$53K</div>
-          <div class="kpi-sub">31 May · PH+TRU</div>
+      <!-- YTD Banner -->
+      <div class="ytd-banner" style="margin-top:12px;">
+        <div>
+          <div class="ytd-label">YTD ENE–MAY 2026</div>
+          <div class="ytd-value" id="a-ytd-val">$20.76M</div>
+          <div class="ytd-sub">PH + TRU · 5 meses cerrados</div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-label">MAY (mes)</div>
-          <div class="kpi-value" id="kpi-mtd">$4.32M</div>
-          <div class="kpi-sub">PH+TRU · 121% del plan $3.56M</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Alertas Críticas</div>
-          <div class="kpi-value red" id="kpi-alertas">3</div>
-          <div class="kpi-sub">Requieren atención</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">UPT Mayo</div>
-          <div class="kpi-value green" id="kpi-upt">5.0</div>
-          <div class="kpi-sub">unidades / trans</div>
+        <div class="ytd-right">
+          <div class="ytd-label" style="margin-bottom:6px;">vs Plan</div>
+          <div class="ytd-badge" id="a-ytd-badge">115.5%</div>
+          <div class="ytd-sub" style="margin-top:4px;" id="a-ytd-plan">Plan $17.97M</div>
         </div>
       </div>
 
-      <!-- Cumplimiento circles -->
+      <!-- KPI 2x2 -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Último Dato PH</div>
+          <div class="kpi-value amber" id="kpi-ayer">$204.7K</div>
+          <div class="kpi-sub" id="kpi-ayer-sub">7 Jun · días 1-7 JUN</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">JUN MTD</div>
+          <div class="kpi-value" id="kpi-mtd">$811K</div>
+          <div class="kpi-sub" id="a-mtd-sub">PH+TRU · 19.5% del plan</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">MAY Cierre</div>
+          <div class="kpi-value green" id="kpi-may">$4.29M</div>
+          <div class="kpi-sub">120.5% del plan · 13,268 uds PH</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">UPT MAY (est)</div>
+          <div class="kpi-value blue" id="kpi-upt">4.5</div>
+          <div class="kpi-sub">13,268 uds · 2,948 trans</div>
+        </div>
+      </div>
+
+      <!-- Cumplimiento -->
       <div class="card">
-        <div class="card-title">Cumplimiento 2026</div>
+        <div class="card-title">Cumplimiento 2026 — PH+TRU vs Plan</div>
         <div class="cumpl-row" id="cumplRow"></div>
       </div>
 
-      <!-- Last 7 days chart -->
+      <!-- Últimos 7 días -->
       <div class="card">
-        <div class="card-title">Últimos 7 días (25–31 May)</div>
-        <div class="chart-wrap">
-          <canvas id="chart7d"></canvas>
+        <div class="card-title">Últimos 7 días — MAY 26 a JUN 1</div>
+        <div class="chart-wrap"><canvas id="chart7d"></canvas></div>
+        <div style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;">
+            <span style="width:10px;height:10px;border-radius:2px;background:#f59e0b;display:inline-block;"></span>PH
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;">
+            <span style="width:10px;height:10px;border-radius:2px;background:#1d4ed8;display:inline-block;"></span>TRU
+          </div>
         </div>
       </div>
 
-      <!-- Alerts preview -->
+      <!-- Alertas preview -->
       <div class="card">
         <div class="card-title">Alertas Recientes</div>
         <div id="alertsPreview"></div>
-        <div style="text-align:center; margin-top:10px;">
-          <button onclick="switchTab('alertas')"
-            style="background:none;border:none;color:var(--amber-dark);font-size:12px;font-weight:700;cursor:pointer;">
+        <div style="text-align:center;margin-top:10px;">
+          <button onclick="switchTab('alertas')" style="background:none;border:none;color:var(--amber-dark);font-size:12px;font-weight:700;cursor:pointer;">
             Ver todas las alertas →
           </button>
         </div>
       </div>
 
-    </div><!-- /tab-inicio -->
+    </div><!-- /inicio -->
 
-    <!-- ==================== TAB 2: VENTAS ==================== -->
+    <!-- ===== TAB 2: VENTAS ===== -->
     <div class="tab-panel" id="tab-ventas">
 
       <div class="card" style="margin-top:12px;">
         <div class="toggle-row">
-          <button class="toggle-btn active" id="tog-diario" onclick="setVentasView('diario')">Diario Mayo</button>
-          <button class="toggle-btn" id="tog-mensual" onclick="setVentasView('mensual')">Mensual 2026</button>
+          <button class="toggle-btn active" id="tog-jun"  onclick="setVentasView('jun')">JUN MTD</button>
+          <button class="toggle-btn"        id="tog-may"  onclick="setVentasView('may')">MAY 2026</button>
+          <button class="toggle-btn"        id="tog-ytd"  onclick="setVentasView('ytd')">Anual 2026</button>
         </div>
 
-        <!-- Diario view -->
-        <div id="view-diario">
+        <!-- JUN view -->
+        <div id="view-jun">
+          <div class="card-title">Venta Diaria — Junio 2026 (PH + TRU)</div>
+          <div class="chart-wrap"><canvas id="chartJun"></canvas></div>
+          <div style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap;">
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:10px;height:10px;border-radius:2px;background:#f59e0b;display:inline-block;"></span>PH</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:10px;height:10px;border-radius:2px;background:#1d4ed8;display:inline-block;"></span>TRU</span>
+          </div>
+          <hr class="divider"/>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;color:var(--text-muted);font-weight:600;">PH (días 1–7 JUN)</span>
+            <span style="font-size:13px;font-weight:800;" id="a-tot-ph">$751,025</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;color:var(--text-muted);font-weight:600;">TRU (días 1–7 JUN)</span>
+            <span style="font-size:13px;font-weight:800;" id="a-tot-tru">$60,036</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #f3f4f6;">
+            <span style="font-size:12px;color:var(--text);font-weight:700;">TOTAL MTD</span>
+            <span style="font-size:14px;font-weight:800;color:var(--amber-dark);" id="a-tot-all">$811,062</span>
+          </div>
+          <div style="margin-top:8px;padding:8px 10px;background:#fef9ec;border-radius:8px;font-size:11px;color:#92400e;">
+            ✓ Datos al 7 Jun (PH+TRU) · Plan mensual: $4.16M
+          </div>
+        </div>
+
+        <!-- MAY view -->
+        <div id="view-may" style="display:none;">
           <div class="card-title">Venta Diaria — Mayo 2026 (PH + TRU)</div>
-          <div class="chart-wrap">
-            <canvas id="chartDiario"></canvas>
+          <div class="chart-wrap"><canvas id="chartMay"></canvas></div>
+          <div style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap;">
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:10px;height:10px;border-radius:2px;background:#f59e0b;display:inline-block;"></span>PH</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:10px;height:10px;border-radius:2px;background:#1d4ed8;display:inline-block;"></span>TRU</span>
           </div>
-          <div style="margin-top:12px; display:flex; gap:16px; flex-wrap:wrap;">
-            <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-              <span style="width:12px;height:12px;border-radius:3px;background:#f59e0b;display:inline-block;"></span>
-              <span>PH (Palacio)</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-              <span style="width:12px;height:12px;border-radius:3px;background:#1d4ed8;display:inline-block;"></span>
-              <span>TRU</span>
-            </div>
+          <hr class="divider"/>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total PH (1–31 May)</span>
+            <span style="font-size:13px;font-weight:800;">$3,901,294</span>
           </div>
-          <div style="margin-top:14px; padding-top:14px; border-top:1px solid #f3f4f6;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-              <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total PH (1–31 May)</span>
-              <span style="font-size:13px;font-weight:800;color:var(--text);">$3,932,734</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-              <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total TRU (1–31 May)</span>
-              <span style="font-size:13px;font-weight:800;color:var(--text);">$387,543</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #f3f4f6;">
-              <span style="font-size:12px;color:var(--text);font-weight:700;">TOTAL MES</span>
-              <span style="font-size:14px;font-weight:800;color:var(--amber-dark);">$4,320,277</span>
-            </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total TRU (1–31 May)</span>
+            <span style="font-size:13px;font-weight:800;">$387,543</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #f3f4f6;">
+            <span style="font-size:12px;color:var(--text);font-weight:700;">TOTAL MES</span>
+            <span style="font-size:14px;font-weight:800;color:var(--amber-dark);">$4,288,837</span>
           </div>
         </div>
 
-        <!-- Mensual view -->
-        <div id="view-mensual" style="display:none;">
+        <!-- YTD view -->
+        <div id="view-ytd" style="display:none;">
           <div class="card-title">Venta Mensual — Real 2026 vs Plan vs 2025</div>
-          <div class="chart-wrap">
-            <canvas id="chartMensual"></canvas>
+          <div class="chart-wrap"><canvas id="chartMensual"></canvas></div>
+          <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;">
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:12px;height:3px;background:#f59e0b;display:inline-block;border-radius:2px;"></span>Real 2026</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:12px;height:3px;background:#6366f1;display:inline-block;border-radius:2px;"></span>Plan 2026</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:12px;height:3px;background:#94a3b8;display:inline-block;border-radius:2px;"></span>Real 2025</span>
           </div>
-          <div style="margin-top:12px; display:flex; gap:12px; flex-wrap:wrap;">
-            <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-              <span style="width:14px;height:3px;background:#f59e0b;display:inline-block;border-radius:2px;"></span>
-              <span>Real 2026</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-              <span style="width:14px;height:3px;background:#6366f1;display:inline-block;border-radius:2px;"></span>
-              <span>Plan 2026</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-              <span style="width:14px;height:3px;background:#94a3b8;border-top:2px dashed #94a3b8;display:inline-block;"></span>
-              <span>Real 2025</span>
-            </div>
-          </div>
-          <div style="margin-top:16px;">
-            <div class="card-title" style="margin-bottom:8px;">Cumplimiento por Mes</div>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Mes</th>
-                  <th class="num">Plan</th>
-                  <th class="num">Real</th>
-                  <th class="num">%</th>
-                </tr>
-              </thead>
-              <tbody id="cumplTable"></tbody>
-            </table>
-          </div>
+          <hr class="divider"/>
+          <div class="card-title" style="margin-bottom:8px;">Cumplimiento por Mes</div>
+          <table class="data-table">
+            <thead><tr><th>Mes</th><th class="num">Plan</th><th class="num">Real</th><th class="num">%</th></tr></thead>
+            <tbody id="cumplTable"></tbody>
+          </table>
         </div>
       </div>
 
-    </div><!-- /tab-ventas -->
+    </div><!-- /ventas -->
 
-    <!-- ==================== TAB 3: TIENDAS ==================== -->
+    <!-- ===== TAB 3: TIENDAS ===== -->
     <div class="tab-panel" id="tab-tiendas">
 
-      <!-- PH Stores -->
       <div class="card" style="margin-top:12px;">
-        <div class="card-title">Palacio de Hierro — Mayo 2026</div>
-        <div id="phBars"></div>
-        <div style="margin-top:16px;">
-          <table class="data-table" id="phTable">
-            <thead>
-              <tr>
-                <th>Tienda</th>
-                <th class="num">Real</th>
-                <th class="num">Plan</th>
-                <th class="num">%</th>
-              </tr>
-            </thead>
-            <tbody id="phTableBody"></tbody>
-          </table>
+        <div class="toggle-row">
+          <button class="toggle-btn active" id="tog-t-jun" onclick="setTiendasView('jun')">JUN MTD</button>
+          <button class="toggle-btn"        id="tog-t-may" onclick="setTiendasView('may')">MAY 2026</button>
         </div>
+        <div class="card-title" id="tiendas-title">Palacio de Hierro — JUN MTD (7 días)</div>
+        <div id="phBars"></div>
+        <hr class="divider"/>
+        <table class="data-table">
+          <thead>
+            <tr><th>Tienda</th><th class="num">Real</th><th class="num">Plan</th><th class="num">%</th></tr>
+          </thead>
+          <tbody id="phTableBody"></tbody>
+        </table>
       </div>
 
       <!-- TRU -->
       <div class="card">
-        <div class="card-title">Toys R Us — Resumen</div>
+        <div class="card-title">Toys R Us · Tienda 1085</div>
         <div class="tru-cards" id="truCards"></div>
-        <div style="padding-top:10px; border-top:1px solid #f3f4f6; margin-top:2px;">
-          <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px;">PRODUCTOS TRU TOP 5</div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Artículo</th>
-                <th class="num">YTD $</th>
-              </tr>
-            </thead>
-            <tbody id="truTop5"></tbody>
-          </table>
-        </div>
+        <hr class="divider"/>
+        <div class="section-label">Top 5 SKUs TRU — YTD</div>
+        <table class="data-table">
+          <thead><tr><th>#</th><th>Artículo</th><th class="num">YTD $</th></tr></thead>
+          <tbody id="truTop5"></tbody>
+        </table>
       </div>
 
-    </div><!-- /tab-tiendas -->
+    </div><!-- /tiendas -->
 
-    <!-- ==================== TAB 4: KPIs ==================== -->
+    <!-- ===== TAB 4: KPIs ===== -->
     <div class="tab-panel" id="tab-kpis">
 
       <div class="card" style="margin-top:12px;">
         <div class="card-title">KPIs Operativos — PH</div>
         <div class="month-selector" id="monthSelector"></div>
+
+        <!-- Big 3 metrics -->
         <div class="big-metrics" id="bigMetrics"></div>
-        <div style="margin-top:4px;">
-          <div class="card-title" style="margin-bottom:8px;">Comparativo Mensual</div>
-          <div style="overflow-x:auto;">
-            <table class="data-table" id="kpiTable" style="min-width:340px;">
-              <thead>
-                <tr>
-                  <th>Mes</th>
-                  <th class="num">Trans</th>
-                  <th class="num">UPT</th>
-                  <th class="num">Ticket</th>
-                  <th class="num">ATT</th>
-                  <th class="num">%</th>
-                </tr>
-              </thead>
-              <tbody id="kpiTableBody"></tbody>
-            </table>
-          </div>
+
+        <!-- Category Breakdown -->
+        <hr class="divider"/>
+        <div class="section-label" style="margin-bottom:10px;" id="catTitle">Categorías — MAY 2026 (PH)</div>
+        <div class="cat-grid" id="catGrid"></div>
+
+        <!-- Comparativo mensual -->
+        <hr class="divider"/>
+        <div class="section-label" style="margin-bottom:8px;">Comparativo Mensual</div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="min-width:340px;">
+            <thead>
+              <tr><th>Mes</th><th class="num">Unid</th><th class="num">UPT</th><th class="num">Ticket</th><th class="num">Venta</th><th class="num">%</th></tr>
+            </thead>
+            <tbody id="kpiTableBody"></tbody>
+          </table>
         </div>
       </div>
 
       <!-- Top SKUs -->
       <div class="card">
-        <div class="card-title">Top 10 SKUs — Mayo + YTD</div>
+        <div class="card-title">Top 10 SKUs — MAY 2026 PH ($ venta)</div>
         <div style="overflow-x:auto;">
-          <table class="data-table" style="min-width:300px;">
+          <table class="data-table" style="min-width:280px;">
             <thead>
-              <tr>
-                <th>#</th>
-                <th>Artículo</th>
-                <th class="num">PH May</th>
-                <th class="num">TRU YTD</th>
-                <th class="num">ABC</th>
-              </tr>
+              <tr><th>#</th><th>Artículo</th><th class="num">$ Venta</th><th class="num">Uds</th></tr>
             </thead>
             <tbody id="skuTable"></tbody>
           </table>
         </div>
       </div>
 
-    </div><!-- /tab-kpis -->
+    </div><!-- /kpis -->
 
-    <!-- ==================== TAB 5: ALERTAS ==================== -->
+    <!-- ===== TAB 5: ALERTAS ===== -->
     <div class="tab-panel" id="tab-alertas">
-
       <div class="card" style="margin-top:12px;">
         <div class="alert-count-bar" id="alertCountBar"></div>
         <div id="alertsList"></div>
       </div>
-
-    </div><!-- /tab-alertas -->
+    </div><!-- /alertas -->
 
   </div><!-- /content -->
 
-  <!-- Bottom Navigation -->
-  <nav class="bottom-nav" id="bottomNav">
-    <button class="nav-item active" data-tab="inicio" onclick="switchTab('inicio')">
-      <span class="nav-icon">🏠</span>
-      <span class="nav-label">Inicio</span>
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="inicio"   onclick="switchTab('inicio')">
+      <span class="nav-icon">🏠</span><span class="nav-label">Inicio</span>
     </button>
-    <button class="nav-item" data-tab="ventas" onclick="switchTab('ventas')">
-      <span class="nav-icon">📈</span>
-      <span class="nav-label">Ventas</span>
+    <button class="nav-item" data-tab="ventas"   onclick="switchTab('ventas')">
+      <span class="nav-icon">📈</span><span class="nav-label">Ventas</span>
     </button>
-    <button class="nav-item" data-tab="tiendas" onclick="switchTab('tiendas')">
-      <span class="nav-icon">🏪</span>
-      <span class="nav-label">Tiendas</span>
+    <button class="nav-item" data-tab="tiendas"  onclick="switchTab('tiendas')">
+      <span class="nav-icon">🏪</span><span class="nav-label">Tiendas</span>
     </button>
-    <button class="nav-item" data-tab="kpis" onclick="switchTab('kpis')">
-      <span class="nav-icon">⚡</span>
-      <span class="nav-label">KPIs</span>
+    <button class="nav-item" data-tab="kpis"     onclick="switchTab('kpis')">
+      <span class="nav-icon">⚡</span><span class="nav-label">KPIs</span>
     </button>
-    <button class="nav-item" data-tab="alertas" onclick="switchTab('alertas')">
-      <span class="nav-icon">🔔</span>
-      <span class="nav-label">Alertas</span>
+    <button class="nav-item" data-tab="alertas"  onclick="switchTab('alertas')">
+      <span class="nav-icon">🔔</span><span class="nav-label">Alertas</span>
     </button>
   </nav>
-
 </div><!-- /app -->
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
 'use strict';
 
 /* ============================================================
-   GOOGLE SHEETS CONFIGURATION
-   ============================================================ */
-const SHEETS_CONFIG = {
-  enabled: false,  // user sets to true after configuring
-  baseUrl: 'https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/gviz/tq?tqx=out:csv&sheet=',
-  sheets: {
-    diario: 'DIARIO',
-    tiendas: 'TIENDAS',
-    kpis: 'KPIS'
-  }
-};
-
-/* ============================================================
-   EMBEDDED FALLBACK DATA
+   DATA — Actualizado 4 Jun 2026
    ============================================================ */
 
-// Monthly data
+// Monthly YTD — real26 = PH+TRU corregido (sin duplicados Resultado)
 const MONTHLY = {
   labels: ['ENE','FEB','MAR','ABR','MAY','JUN'],
-  plan:   [5017757, 2860930, 3122750, 3413466, 3557760, 3200000],
-  real25: [2185695, 1518515, 1445170, 1533400, 1609460, 0],
-  real26: [5821692, 3319667, 3163388, 4916131, 4320277, 127094],
-  cumpl:  [116.0, 116.0, 101.3, 144.0, 121.4, 4.0]
+  plan:   [5017757, 2860930, 3122750, 3413466, 3557760, 4164051],
+  real25: [2185695, 1518515, 1445170, 1533400, 1609460, 1856117],
+  real26: [5759518, 3303931, 3147964, 4264192, 4288837, 811062],
+  cumpl:  [114.8, 115.5, 100.8, 124.9, 120.5, 19.5]
 };
 
-// May daily PH + TRU (real data)
-// Cierre MAY 2026 (1–31) — PH: CSV Reporte "Venta Neta s/Cupones a Rtl" | TRU: ZRTL_ZRETAIL5 W013
-let MAY_DAILY = [
-  {d: 1, w:'V', ph:441177, tru:72993},
-  {d: 2, w:'S', ph:271802, tru:19530},
-  {d: 3, w:'D', ph:312335, tru:49725},
-  {d: 4, w:'L', ph:111442, tru:9802},
-  {d: 5, w:'M', ph:105216, tru:7132},
-  {d: 6, w:'Mi', ph:57366, tru:10103},
-  {d: 7, w:'J', ph:93256, tru:11338},
-  {d: 8, w:'V', ph:111342, tru:3871},
-  {d: 9, w:'S', ph:187582, tru:30557},
-  {d:10, w:'D', ph:115664, tru:8977},
-  {d:11, w:'L', ph:56903, tru:3593},
-  {d:12, w:'M', ph:42207, tru:7250},
-  {d:13, w:'Mi', ph:46180, tru:2760},
-  {d:14, w:'J', ph:71748, tru:4428},
-  {d:15, w:'V', ph:114300, tru:1616},
-  {d:16, w:'S', ph:159299, tru:9958},
-  {d:17, w:'D', ph:189163, tru:18347},
-  {d:18, w:'L', ph:50985, tru:2903},
-  {d:19, w:'M', ph:45454, tru:2999},
-  {d:20, w:'Mi', ph:33467, tru:5909},
-  {d:21, w:'J', ph:58010, tru:0},
-  {d:22, w:'V', ph:84854, tru:3359},
-  {d:23, w:'S', ph:193451, tru:22658},
-  {d:24, w:'D', ph:180002, tru:12547},
-  {d:25, w:'L', ph:47088, tru:5459},
-  {d:26, w:'M', ph:51123, tru:5896},
-  {d:27, w:'Mi', ph:72814, tru:1203},
-  {d:28, w:'J', ph:67585, tru:4447},
-  {d:29, w:'V', ph:146823, tru:9473},
-  {d:30, w:'S', ph:194264, tru:17783},
-  {d:31, w:'D', ph:219831, tru:20927}
+// YTD acumulado ENE-JUN
+const YTD_REAL   = MONTHLY.real26.reduce((a,b)=>a+b,0);  // 23,106,573
+const YTD_PLAN   = MONTHLY.plan.reduce((a,b)=>a+b,0);    // 20,173,663
+const YTD_CUMPL  = (YTD_REAL/YTD_PLAN*100).toFixed(1);   // ~110.4%
+
+// MAY 2026 daily — PH Venta Neta s/Cupones a Rtl | TRU ZRTL_ZRETAIL5 W013 (sin duplicados)
+const MAY_DAILY = [
+  {d:1, w:'V', ph:441177, tru:72993},{d:2, w:'S', ph:271802, tru:19530},
+  {d:3, w:'D', ph:312335, tru:49725},{d:4, w:'L', ph:111442, tru:9802},
+  {d:5, w:'M', ph:105216, tru:7132}, {d:6, w:'Mi',ph:57366,  tru:10103},
+  {d:7, w:'J', ph:93256,  tru:11338},{d:8, w:'V', ph:111342, tru:3871},
+  {d:9, w:'S', ph:187582, tru:30557},{d:10,w:'D', ph:115664, tru:8977},
+  {d:11,w:'L', ph:56903,  tru:3593}, {d:12,w:'M', ph:42207,  tru:7250},
+  {d:13,w:'Mi',ph:46180,  tru:2760}, {d:14,w:'J', ph:71748,  tru:4428},
+  {d:15,w:'V', ph:114300, tru:1616}, {d:16,w:'S', ph:159299, tru:9958},
+  {d:17,w:'D', ph:189163, tru:18347},{d:18,w:'L', ph:50985,  tru:2903},
+  {d:19,w:'M', ph:45454,  tru:2999}, {d:20,w:'Mi',ph:33467,  tru:5909},
+  {d:21,w:'J', ph:58010,  tru:0},    {d:22,w:'V', ph:84854,  tru:3359},
+  {d:23,w:'S', ph:193451, tru:22658},{d:24,w:'D', ph:180002, tru:12547},
+  {d:25,w:'L', ph:47088,  tru:5459}, {d:26,w:'M', ph:51123,  tru:5896},
+  {d:27,w:'Mi',ph:72814,  tru:1203}, {d:28,w:'J', ph:67585,  tru:4447},
+  {d:29,w:'V', ph:146823, tru:9473}, {d:30,w:'S', ph:194264, tru:17783},
+  {d:31,w:'D', ph:219831, tru:20927}
 ];
 
-// JUN 2026 — MTD días 1-2 (PH) + días 1-3 (TRU)
-let JUN_DAILY = [
-  {d: 1, w:'L', ph:64257,  tru:5933},
-  {d: 2, w:'M', ph:62837,  tru:8997},
-  {d: 3, w:'Mi', ph:0,     tru:12116}
+// JUN 2026 MTD — PH días 1-2 · TRU días 1-3 (corregido sin duplicados Resultado)
+const JUN_DAILY = [
+  {d:1, w:'L', ph:64257, tru:2966},
+  {d:2, w:'M', ph:64567, tru:4498},
+  {d:3, w:'Mi', ph:57331, tru:6058},
+  {d:4, w:'J', ph:54645, tru:120},
+  {d:5, w:'V', ph:96061, tru:8067},
+  {d:6, w:'S', ph:209463, tru:22797},
+  {d:7, w:'D', ph:204702, tru:15529},
+  {d:8, w:'L', ph:0, tru:0},
+  {d:9, w:'M', ph:0, tru:0},
+  {d:10, w:'Mi', ph:0, tru:0},
+  {d:11, w:'J', ph:0, tru:0},
+  {d:12, w:'V', ph:0, tru:0},
+  {d:13, w:'S', ph:0, tru:0},
+  {d:14, w:'D', ph:0, tru:0},
+  {d:15, w:'L', ph:0, tru:0},
+  {d:16, w:'M', ph:0, tru:0},
+  {d:17, w:'Mi', ph:0, tru:0},
+  {d:18, w:'J', ph:0, tru:0},
+  {d:19, w:'V', ph:0, tru:0},
+  {d:20, w:'S', ph:0, tru:0},
+  {d:21, w:'D', ph:0, tru:0},
+  {d:22, w:'L', ph:0, tru:0},
+  {d:23, w:'M', ph:0, tru:0},
+  {d:24, w:'Mi', ph:0, tru:0},
+  {d:25, w:'J', ph:0, tru:0},
+  {d:26, w:'V', ph:0, tru:0},
+  {d:27, w:'S', ph:0, tru:0},
+  {d:28, w:'D', ph:0, tru:0},
+  {d:29, w:'L', ph:0, tru:0},
+  {d:30, w:'M', ph:0, tru:0}
 ];
-const DAILY = JUN_DAILY; // ← cambiar a MAY_DAILY al ver mes anterior
 
-// PH stores — MAY 2026 mes completo (1-31) · CSV Reporte "Venta Neta s/Cupones a Rtl"
-let PH_STORES = ['Polanco','Santa Fe','Perisur','Durango','Guadalajara','Puebla','Querétaro','Monterrey'];
-let PH_MAY    = [792134, 366246, 742248, 248722, 635971, 502851, 590126, 0];
-let PH_JUN    = [20742, 8023, 25225, 12207, 16240, 17980, 14951, 0];
-let PH_PLAN   = [527535, 395623, 592846, 215334, 515948, 448060, 633621, 0];
+const CUR_DAILY = JUN_DAILY;  // mes en curso (lo fija procesar_ventas.py)
 
-// KPIs — MAY: venta y unid REALES (cierre 31/05); trans/skins/ticket aún ESTIMADOS hasta tener export POS
-let KPI_OP = {
-  ENE:{trans:4612, unid:20752, skins:3440, ticket:1262, venta:5821692, cumpl:116.0},
-  FEB:{trans:2437, unid:12060, skins:1797, ticket:1362, venta:3319667, cumpl:116.0},
-  MAR:{trans:2353, unid:10579, skins:1779, ticket:1344, venta:3163388, cumpl:101.3},
-  ABR:{trans:2885, unid:12473, skins:2012, ticket:1267, venta:4285888, cumpl:144.0},
-  MAY:{trans:2361, unid:13344, skins:1653, ticket:1666, venta:3932734, cumpl:121.4},
-  JUN:{trans:0,    unid:0,     skins:0,    ticket:0,    venta:154139,  cumpl:4.0}
+// Últimos 7 días con datos completos: MAY 26 – JUN 1
+const LAST7 = [
+  {lbl:'M26',  ph:51123,  tru:5896},
+  {lbl:'Mi27', ph:72814,  tru:1203},
+  {lbl:'J28',  ph:67585,  tru:4447},
+  {lbl:'V29',  ph:146823, tru:9473},
+  {lbl:'S30',  ph:194264, tru:17783},
+  {lbl:'D31',  ph:219831, tru:20927},
+  {lbl:'L1/6', ph:64257,  tru:2966}
+];
+
+// PH Stores — valores del Tracker v16 (CSV Venta Neta s/Cupones a Rtl)
+const PH_STORES = ['Polanco','Santa Fe','Perisur','Durango','Guadalajara','Puebla','Querétaro','Online PH'];
+const PH_MAY    = [792134, 366246, 742248, 248722, 635971, 502851, 590126, 54654];
+const PH_JUN    = [162690, 87388, 113411, 58742, 115290, 103240, 86938, 23326];
+// Plan MAY (tracker col C)
+const PH_PLAN_MAY = [527535, 395623, 592846, 215334, 515948, 448060, 633621, 38793];
+// Plan JUN por tienda: prorrateado de MAY × (JUN_plan / MAY_plan)
+const PH_PLAN_JUN_FULL = PH_PLAN_MAY.map(p => Math.round(p * 3200000 / 3557760));
+const JUN_DAYS_ELAPSED = 7; // días con datos PH
+
+// KPIs Operativos PH — trans/unid/skins de CSV PH; venta=PH+TRU
+// ticket = venta_PH / trans_est | UPT = unid / trans_est
+const KPI_OP = {
+  ENE:{trans:4027, unid:18121, skins:3270, ticket:1269, venta:5759518, cumpl:114.8},
+  FEB:{trans:2673, unid:12028, skins:2311, ticket:1237, venta:3303931, cumpl:115.5},
+  MAR:{trans:2343, unid:10543, skins:2110, ticket:1344, venta:3147964, cumpl:100.8},
+  ABR:{trans:2760, unid:12422, skins:2382, ticket:1317, venta:4264192, cumpl:124.9},
+  MAY:{trans:2948, unid:13268, skins:2566, ticket:1323, venta:4288837, cumpl:120.5},
+  JUN:{trans:96,   unid:2360,   skins:92,   ticket:1340, venta:811062,  cumpl:19.5}
 };
 
-// TRU — Fuente: ZRTL_ZRETAIL5 Tienda 1085 · Cierre 31 May 2026 (1–31 May completo)
+// Desglose por categoría — Fuente: CSV Venta Neta s/Cupones a Rtl (PH solamente)
+// v=venta$  u=unidades
+const CAT_DATA = {
+  ENE:{piel:{v:1929448,u:3270},ropa:{v:1369234,u:5033},acc:{v:1008072,u:4884},relleno:{v:107233,u:752},  totalV:5111247,totalU:18121},
+  FEB:{piel:{v:1395198,u:2311},ropa:{v:739479, u:2702},acc:{v:663668, u:3601},relleno:{v:63892, u:448},  totalV:3303931,totalU:12028},
+  MAR:{piel:{v:1274012,u:2110},ropa:{v:805568, u:2534},acc:{v:585726, u:2690},relleno:{v:71592, u:489},  totalV:3147964,totalU:10543},
+  ABR:{piel:{v:1485643,u:2382},ropa:{v:891306, u:2880},acc:{v:712122, u:3688},relleno:{v:69500, u:460},  totalV:3633949,totalU:12422},
+  MAY:{piel:{v:1645825,u:2566},ropa:{v:903409, u:3010},acc:{v:797441, u:3992},relleno:{v:79209, u:514},  totalV:3901294,totalU:13268},
+  JUN:{piel:{v:55535,  u:92},  ropa:{v:29884,  u:106}, acc:{v:19381,  u:86},  relleno:{v:3549,  u:23},   totalV:128609, totalU:430}
+};
+
+// TRU — ZRTL_ZRETAIL5 Tienda 1085 (valores sin duplicados Resultado)
 const TRU = {
-  abr: {periodo:'09–30 ABR', piezas:3213, venta:630243},
-  may: {periodo:'01–31 MAY', piezas:1147,  venta:387543},
-  jun: {periodo:'01–03 JUN', piezas:88,    venta:27045}
+  abr:{periodo:'09–30 ABR', piezas:3213, venta:630243},
+  may:{periodo:'01–31 MAY', piezas:1147, venta:387543},
+  jun:{periodo:'01–07 JUN', piezas:178,  venta:60036}
 };
 
-// Top SKUs — Fuente: CSV Reporte PH + ZRTL TRU · Actualizado 4 Jun 2026
+// Top 10 SKUs MAY 2026 — Fuente: CSV Venta Neta s/Cupones a Rtl PH
 const TOP_SKUS = [
-  {rank: 1, art:'GRABA MENSAJE'                 , ph_may:  2750, tru_ytd: 22550, total:  25300, abc:'A'},
-  {rank: 2, art:'TEDDY'                         , ph_may:  1516, tru_ytd: 21217, total:  22733, abc:'A'},
-  {rank: 3, art:'CACHORRO BROWNIE'              , ph_may:   998, tru_ytd: 20465, total:  21463, abc:'A'},
-  {rank: 4, art:'CORAZON QUE LATE'              , ph_may:  2576, tru_ytd: 13524, total:  16099, abc:'A'},
-  {rank: 5, art:'CACHORRO PUDIN'                , ph_may:   499, tru_ytd: 10981, total:  11480, abc:'A'},
-  {rank: 6, art:'KITTY'                         , ph_may:  1291, tru_ytd: 10331, total:  11622, abc:'B'},
-  {rank: 7, art:'MONO SONRIENTE'                , ph_may:  1378, tru_ytd:  9643, total:  11021, abc:'B'},
-  {rank: 8, art:'OSO ARCOIRIS'                  , ph_may:     0, tru_ytd:  9507, total:   9507, abc:'B'},
-  {rank: 9, art:'CACHORRO JUGUETON'             , ph_may:     0, tru_ytd:  7955, total:   7955, abc:'C'},
-  {rank:10, art:'RANA VERDE'                    , ph_may:   758, tru_ytd:  6820, total:   7578, abc:'C'},
+  {rank:1,  art:'PELUCHE PAWLETTE',         ph_may:245742, ph_uds:325},
+  {rank:2,  art:'ACC GRABA MENSAJE',         ph_may:177100, ph_uds:645},
+  {rank:3,  art:'PELUCHE TEDDY',             ph_may:174992, ph_uds:231},
+  {rank:4,  art:'PELUCHE AJOLOTE',           ph_may:124875, ph_uds:145},
+  {rank:5,  art:'PELUCHE ABRAZOS FELICES',   ph_may:110771, ph_uds:166},
+  {rank:6,  art:'ACC CORAZON QUE LATE',      ph_may:100289, ph_uds:1015},
+  {rank:7,  art:'PAWLETTE COLORES PASTEL',   ph_may:89852,  ph_uds:111},
+  {rank:8,  art:'PELUCHE CACHORRO BROWNIE',  ph_may:75819,  ph_uds:152},
+  {rank:9,  art:'GRAN ELEFANTE',             ph_may:61090,  ph_uds:69},
+  {rank:10, art:'CALZADO CANVAS',            ph_may:56449,  ph_uds:219}
 ];
 
-// Alerts
+// Alertas
 const ALERTS = [
-  {lvl:'critica',     title:'Quiebre stock — VESTIDO HADA UNICORNIO', desc:'Sin unidades · Venta perdida $49K YTD'},
-  {lvl:'critica',     title:'Quiebre stock — CHAMARRA SHERPA',        desc:'Sin unidades · $39K YTD · 3 tiendas'},
-  {lvl:'critica',     title:'Caída ventas -37.7% — Santa Fe MAY',     desc:'Real $223K vs Plan $396K · Brecha $172K'},
-  {lvl:'advertencia', title:'PAWLETTE II — riesgo quiebre (15d)',      desc:'Solo 42 uds · SKU #9 en ventas'},
-  {lvl:'advertencia', title:'PIJAMA ROSA — quiebre inminente (9d)',    desc:'Solo 25 uds · Alto margen 34.9%'},
-  {lvl:'advertencia', title:'Sobreinventario — RANA VERDE (283d)',     desc:'Capital inmovilizado ~$75K'},
-  {lvl:'info',        title:'MAY 2026 — Cierre 31 May', desc:'PH $3.93M · TRU $388K · Total $4.32M · Cumpl 121% del plan · 13,344 uds PH + 1,147 uds TRU'},
+  {lvl:'critica',     title:'Quiebre stock — VESTIDO HADA UNICORNIO',  desc:'Sin unidades disponibles · Venta perdida estimada $49K YTD'},
+  {lvl:'critica',     title:'Quiebre stock — CHAMARRA SHERPA',         desc:'Sin unidades · $39K YTD · afecta 3 tiendas'},
+  {lvl:'advertencia', title:'Santa Fe MAY — por debajo del plan',      desc:'Real $361K vs Plan $396K · -8.7% · brecha $34K'},
+  {lvl:'advertencia', title:'Querétaro MAY — por debajo del plan',     desc:'Real $587K vs Plan $634K · -7.4% · brecha $47K'},
+  {lvl:'advertencia', title:'PAWLETTE II — riesgo quiebre (~15d)',      desc:'Solo 42 uds disponibles · SKU top en ventas'},
+  {lvl:'advertencia', title:'PIJAMA ROSA — quiebre inminente (~9d)',    desc:'Solo 25 uds · Margen alto 34.9%'},
+  {lvl:'advertencia', title:'Sobreinventario — RANA VERDE (283d)',      desc:'Capital inmovilizado ~$75K · revisar descuento'},
+  {lvl:'info',        title:'MAY 2026 — Cierre completo 31 May',        desc:'PH $3.9M · TRU $388K · Total $4.29M · Cumpl 120.5% del plan · 13,268 uds PH + 1,147 uds TRU'},
+  {lvl:'info',        title:'JUN 2026 — MTD 7 Jun (PH+TRU)',  desc:'PH $751K · TRU $60K · Total $811K · 19.5% del plan mensual $4.16M'}
 ];
 
 /* ============================================================
-   GOOGLE SHEETS LOADER
+   UTILIDADES
    ============================================================ */
-function parseCSV(text) {
-  return text.trim().split('\n').map(row => {
-    const cells = [];
-    let cur = '', inQ = false;
-    for (let i = 0; i < row.length; i++) {
-      const c = row[i];
-      if (c === '"') { inQ = !inQ; continue; }
-      if (c === ',' && !inQ) { cells.push(cur.trim()); cur = ''; continue; }
-      cur += c;
-    }
-    cells.push(cur.trim());
-    return cells;
-  });
-}
-
-async function loadFromSheets() {
-  if (!SHEETS_CONFIG.enabled) {
-    updateSyncChip(false, null);
-    return;
-  }
-  const btn = document.getElementById('syncBtn');
-  btn.classList.add('spinning');
-  try {
-    // Load DIARIO
-    const diarioRes = await fetch(SHEETS_CONFIG.baseUrl + SHEETS_CONFIG.sheets.diario);
-    if (diarioRes.ok) {
-      const rows = parseCSV(await diarioRes.text()).slice(1);
-      MAY_DAILY = rows.filter(r => r[0]).map(r => ({
-        d:   parseInt(r[0]) || 0,
-        w:   r[1] || '',
-        ph:  parseFloat(r[2]) || 0,
-        tru: parseFloat(r[3]) || 0
-      }));
-    }
-
-    // Load TIENDAS
-    const tiendasRes = await fetch(SHEETS_CONFIG.baseUrl + SHEETS_CONFIG.sheets.tiendas);
-    if (tiendasRes.ok) {
-      const rows = parseCSV(await tiendasRes.text()).slice(1);
-      PH_STORES = []; PH_MAY = []; PH_PLAN = [];
-      rows.filter(r => r[0]).forEach(r => {
-        PH_STORES.push(r[0]);
-        PH_MAY.push(parseFloat(r[1]) || 0);
-        PH_PLAN.push(parseFloat(r[2]) || 0);
-      });
-    }
-
-    // Load KPIS
-    const kpisRes = await fetch(SHEETS_CONFIG.baseUrl + SHEETS_CONFIG.sheets.kpis);
-    if (kpisRes.ok) {
-      const rows = parseCSV(await kpisRes.text()).slice(1);
-      rows.filter(r => r[0]).forEach(r => {
-        const mes = r[0].toUpperCase();
-        KPI_OP[mes] = {
-          trans:  parseInt(r[1])   || 0,
-          unid:   parseInt(r[2])   || 0,
-          skins:  parseInt(r[3])   || 0,
-          ticket: parseFloat(r[4]) || 0,
-          venta:  parseFloat(r[5]) || 0,
-          cumpl:  parseFloat(r[6]) || 0
-        };
-      });
-    }
-
-    updateSyncChip(true, new Date());
-    showToast('✓ Datos actualizados desde Google Sheets');
-    rebuildAll();
-  } catch(err) {
-    console.error('Sheets error:', err);
-    updateSyncChip(false, null);
-    showToast('📡 Usando datos guardados');
-  } finally {
-    btn.classList.remove('spinning');
-  }
-}
-
-function updateSyncChip(ok, date) {
-  const chip = document.getElementById('syncChip');
-  if (ok && date) {
-    chip.className = 'sync-chip ok';
-    const mins = Math.round((Date.now() - date.getTime()) / 60000);
-    chip.textContent = mins < 1 ? '✓ Actualizado ahora' : `✓ Hace ${mins} min`;
-  } else {
-    chip.className = 'sync-chip off';
-    chip.textContent = 'Sin conexión';
-  }
-}
-
-async function syncData() {
-  await loadFromSheets();
-}
-
-/* ============================================================
-   FORMATTING UTILITIES
-   ============================================================ */
-function fmtMXN(v, decimals) {
-  if (v === 0) return '$0';
-  if (v >= 1000000) return '$' + (v/1000000).toFixed(decimals !== undefined ? decimals : 1) + 'M';
+function fmtMXN(v, d) {
+  if (!v || v === 0) return '$0';
+  if (v >= 1000000) return '$' + (v/1000000).toFixed(d !== undefined ? d : 2) + 'M';
   if (v >= 1000)    return '$' + Math.round(v/1000) + 'K';
   return '$' + v.toLocaleString('es-MX');
 }
+function fmtNum(v)  { return v ? v.toLocaleString('es-MX') : '0'; }
 
-function fmtNum(v) {
-  return v.toLocaleString('es-MX');
+// === Mes en curso (lo actualiza procesar_ventas.py) ===
+const CUR_MON='JUN', CUR_IDX=5;
+function hydrateCurApp(){
+  const i=CUR_IDX, mon=CUR_MON;
+  const real=MONTHLY.real26[i]||0, plan=MONTHLY.plan[i]||0, cumpl=MONTHLY.cumpl[i]||0;
+  const daily=(typeof CUR_DAILY!=='undefined'?CUR_DAILY:[]);
+  const phT=daily.reduce((a,d)=>a+(d.ph||0),0);
+  const truT=daily.reduce((a,d)=>a+(d.tru||0),0);
+  const days=daily.filter(d=>d.ph>0||d.tru>0).length;
+  const lastPH=[...daily].reverse().find(d=>d.ph>0)||{d:0,ph:0};
+  const cap=mon.charAt(0)+mon.slice(1).toLowerCase();
+  const full=v=>'$'+Math.round(v).toLocaleString('es-MX');
+  const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+  let realC=0, planC=0;
+  for(let k=0;k<i;k++){ realC+=MONTHLY.real26[k]||0; planC+=MONTHLY.plan[k]||0; }
+  const cumplC=planC?(realC/planC*100):0;
+  set('a-ytd-val', fmtMXN(realC,2));
+  set('a-ytd-badge', cumplC.toFixed(1)+'%');
+  set('a-ytd-plan', 'Plan '+fmtMXN(planC,2));
+  set('kpi-ayer', fmtMXN(lastPH.ph,0));
+  set('kpi-ayer-sub', lastPH.d+' '+cap+' · días 1-'+days+' '+mon);
+  set('kpi-mtd', fmtMXN(real,0));
+  set('a-mtd-sub', 'PH+TRU · '+cumpl+'% del plan');
+  set('a-tot-ph', full(phT));
+  set('a-tot-tru', full(truT));
+  set('a-tot-all', full(real));
 }
+function pctColor(p){ return p >= 100 ? '#10b981' : p >= 85 ? '#f59e0b' : '#ef4444'; }
+function pctClass(p){ return p >= 100 ? 'over'    : p >= 85 ? 'near'   : 'under'; }
+function badgeClass(p){ return p >= 100 ? 'green'  : p >= 85 ? 'amber'  : 'red'; }
+function pct(a,b)   { return b > 0 ? Math.round(a/b*100) : 0; }
 
-function cumplColor(pct) {
-  if (pct >= 100) return '#10b981';
-  if (pct >= 85)  return '#f59e0b';
-  return '#ef4444';
-}
-
-function cumplClass(pct) {
-  if (pct >= 100) return 'over';
-  if (pct >= 85)  return 'near';
-  return 'under';
-}
-
-function storeBarColor(pct) {
-  if (pct >= 100) return '#10b981';
-  if (pct >= 80)  return '#f59e0b';
-  return '#ef4444';
-}
-
-/* ============================================================
-   CHART INSTANCES
-   ============================================================ */
 const charts = {};
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
 
-function destroyChart(id) {
-  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+function chartDefaults({ stacked=false, yTick, aspectRatio=2 }={}) {
+  return {
+    responsive:true, maintainAspectRatio:true, aspectRatio,
+    animation:{ duration:400 },
+    plugins:{
+      legend:{ display:false },
+      tooltip:{
+        backgroundColor:'#1f2937', titleColor:'#f9fafb', bodyColor:'#d1d5db',
+        cornerRadius:8, padding:10,
+        callbacks:{ label: ctx => ' ' + fmtMXN(ctx.raw, 0) }
+      }
+    },
+    scales:{
+      x:{ stacked, grid:{ display:false }, ticks:{ color:'#9ca3af', font:{ size:9 }, maxRotation:0 } },
+      y:{ stacked, grid:{ color:'#f3f4f6' }, ticks:{ color:'#9ca3af', font:{ size:9 }, callback: yTick || (v=>v) } }
+    }
+  };
 }
 
 /* ============================================================
-   TAB 1: INICIO
+   TAB 1 — INICIO
    ============================================================ */
 function buildInicio() {
   // Cumplimiento circles
-  const row = document.getElementById('cumplRow');
-  row.innerHTML = MONTHLY.labels.map((lbl, i) => {
-    const pct = MONTHLY.cumpl[i];
+  document.getElementById('cumplRow').innerHTML = MONTHLY.labels.map((lbl,i) => {
+    const p = MONTHLY.cumpl[i];
     return `<div class="cumpl-item">
-      <div class="cumpl-circle ${cumplClass(pct)}">${pct}%</div>
+      <div class="cumpl-circle ${pctClass(p)}">${p}%</div>
       <div class="cumpl-label">${lbl}</div>
     </div>`;
   }).join('');
 
-  // Last 7 days chart (days 11-17)
-  const last7 = DAILY.slice(-7);
+  // Últimos 7 días
   destroyChart('chart7d');
   const ctx = document.getElementById('chart7d').getContext('2d');
   charts['chart7d'] = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: last7.map(d => d.w + d.d),
-      datasets: [
-        {
-          label: 'PH',
-          data: last7.map(d => d.ph),
-          backgroundColor: '#f59e0b',
-          borderRadius: 4,
-          borderSkipped: false
-        },
-        {
-          label: 'TRU',
-          data: last7.map(d => d.tru),
-          backgroundColor: '#1d4ed8',
-          borderRadius: 4,
-          borderSkipped: false
-        }
+    type:'bar',
+    data:{
+      labels: LAST7.map(d=>d.lbl),
+      datasets:[
+        { label:'PH',  data:LAST7.map(d=>d.ph),  backgroundColor:'#f59e0b', borderRadius:4 },
+        { label:'TRU', data:LAST7.map(d=>d.tru), backgroundColor:'#1d4ed8', borderRadius:4 }
       ]
     },
-    options: chartDefaults({
-      stacked: true,
-      yTick: v => fmtMXN(v, 0)
-    })
+    options: chartDefaults({ stacked:true, yTick:v=>fmtMXN(v,0) })
   });
 
-  // KPI values
-  const ayer = DAILY[DAILY.length - 1];
-  if (ayer) {
-    document.getElementById('kpi-ayer').textContent = fmtMXN(ayer.ph + ayer.tru);
-  }
-  const mtd = DAILY.reduce((s, d) => s + d.ph + d.tru, 0);
-  document.getElementById('kpi-mtd').textContent = fmtMXN(mtd);
-
   // Alerts preview
-  const prev = document.getElementById('alertsPreview');
   const icons = {critica:'🔴', advertencia:'🟡', info:'🔵'};
-  prev.innerHTML = ALERTS.slice(0, 3).map(a => `
+  document.getElementById('alertsPreview').innerHTML = ALERTS.slice(0,3).map(a=>`
     <div class="alert-preview-item" onclick="switchTab('alertas')">
       <span style="font-size:16px;">${icons[a.lvl]}</span>
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--text);">${a.title}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${a.desc}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 /* ============================================================
-   TAB 2: VENTAS
+   TAB 2 — VENTAS
    ============================================================ */
+let ventasView = 'jun';
 function buildVentas() {
-  // Diario chart
-  destroyChart('chartDiario');
-  const ctxD = document.getElementById('chartDiario').getContext('2d');
-  charts['chartDiario'] = new Chart(ctxD, {
-    type: 'bar',
-    data: {
-      labels: DAILY.map(d => d.w + d.d),
-      datasets: [
-        {
-          label: 'PH',
-          data: DAILY.map(d => d.ph),
-          backgroundColor: '#f59e0b',
-          borderRadius: 3
-        },
-        {
-          label: 'TRU',
-          data: DAILY.map(d => d.tru),
-          backgroundColor: '#1d4ed8',
-          borderRadius: 3
-        }
+  // JUN chart
+  destroyChart('chartJun');
+  charts['chartJun'] = new Chart(document.getElementById('chartJun').getContext('2d'), {
+    type:'bar',
+    data:{
+      labels: JUN_DAILY.map(d=>d.w+d.d),
+      datasets:[
+        { label:'PH',  data:JUN_DAILY.map(d=>d.ph),  backgroundColor:'#f59e0b', borderRadius:4 },
+        { label:'TRU', data:JUN_DAILY.map(d=>d.tru), backgroundColor:'#1d4ed8', borderRadius:4 }
       ]
     },
-    options: chartDefaults({
-      stacked: true,
-      yTick: v => fmtMXN(v, 0),
-      maxH: 200
-    })
+    options: chartDefaults({ stacked:true, yTick:v=>fmtMXN(v,0) })
+  });
+
+  // MAY chart
+  destroyChart('chartMay');
+  charts['chartMay'] = new Chart(document.getElementById('chartMay').getContext('2d'), {
+    type:'bar',
+    data:{
+      labels: MAY_DAILY.map(d=>d.w+d.d),
+      datasets:[
+        { label:'PH',  data:MAY_DAILY.map(d=>d.ph),  backgroundColor:'#f59e0b', borderRadius:3 },
+        { label:'TRU', data:MAY_DAILY.map(d=>d.tru), backgroundColor:'#1d4ed8', borderRadius:3 }
+      ]
+    },
+    options: chartDefaults({ stacked:true, yTick:v=>fmtMXN(v,0) })
   });
 
   // Mensual chart
   destroyChart('chartMensual');
-  const ctxM = document.getElementById('chartMensual').getContext('2d');
-  charts['chartMensual'] = new Chart(ctxM, {
-    type: 'line',
-    data: {
+  charts['chartMensual'] = new Chart(document.getElementById('chartMensual').getContext('2d'), {
+    type:'line',
+    data:{
       labels: MONTHLY.labels,
-      datasets: [
-        {
-          label: 'Real 2026',
-          data: MONTHLY.real26,
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245,158,11,0.1)',
-          pointBackgroundColor: '#f59e0b',
-          pointRadius: 5,
-          borderWidth: 2.5,
-          tension: 0.3,
-          fill: true
-        },
-        {
-          label: 'Plan 2026',
-          data: MONTHLY.plan,
-          borderColor: '#6366f1',
-          backgroundColor: 'rgba(99,102,241,0.05)',
-          pointBackgroundColor: '#6366f1',
-          pointRadius: 4,
-          borderWidth: 2,
-          tension: 0.3,
-          fill: false
-        },
-        {
-          label: 'Real 2025',
-          data: MONTHLY.real25,
-          borderColor: '#94a3b8',
-          borderDash: [5,4],
-          pointBackgroundColor: '#94a3b8',
-          pointRadius: 3,
-          borderWidth: 1.5,
-          tension: 0.3,
-          fill: false
-        }
+      datasets:[
+        { label:'Real 2026', data:MONTHLY.real26, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.1)', pointBackgroundColor:'#f59e0b', pointRadius:5, borderWidth:2.5, tension:.3, fill:true },
+        { label:'Plan 2026', data:MONTHLY.plan,   borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.05)', pointBackgroundColor:'#6366f1', pointRadius:4, borderWidth:2, tension:.3, fill:false },
+        { label:'Real 2025', data:MONTHLY.real25, borderColor:'#94a3b8', borderDash:[5,4], pointBackgroundColor:'#94a3b8', pointRadius:3, borderWidth:1.5, tension:.3, fill:false }
       ]
     },
-    options: chartDefaults({ yTick: v => fmtMXN(v, 1), maxH: 200 })
+    options: chartDefaults({ yTick:v=>fmtMXN(v,1) })
   });
 
   // Cumpl table
-  const tbody = document.getElementById('cumplTable');
-  tbody.innerHTML = MONTHLY.labels.map((lbl, i) => {
-    const pct = MONTHLY.cumpl[i];
-    const cl  = pct >= 100 ? 'green' : pct >= 85 ? 'amber' : 'red';
+  document.getElementById('cumplTable').innerHTML = MONTHLY.labels.map((lbl,i)=>{
+    const p = MONTHLY.cumpl[i];
     return `<tr>
       <td style="font-weight:700;">${lbl}</td>
-      <td class="num" style="color:var(--text-muted);">${fmtMXN(MONTHLY.plan[i])}</td>
-      <td class="num">${fmtMXN(MONTHLY.real26[i])}</td>
-      <td class="num"><span class="badge ${cl}">${pct}%</span></td>
+      <td class="num" style="color:var(--text-muted);">${fmtMXN(MONTHLY.plan[i],1)}</td>
+      <td class="num">${fmtMXN(MONTHLY.real26[i],1)}</td>
+      <td class="num"><span class="badge ${badgeClass(p)}">${p}%</span></td>
     </tr>`;
   }).join('');
 }
 
-let ventasView = 'diario';
 function setVentasView(v) {
   ventasView = v;
-  document.getElementById('tog-diario').classList.toggle('active', v === 'diario');
-  document.getElementById('tog-mensual').classList.toggle('active', v === 'mensual');
-  document.getElementById('view-diario').style.display  = v === 'diario'  ? '' : 'none';
-  document.getElementById('view-mensual').style.display = v === 'mensual' ? '' : 'none';
+  ['jun','may','ytd'].forEach(id=>{
+    document.getElementById('tog-'+id).classList.toggle('active', id===v);
+    document.getElementById('view-'+id).style.display = id===v ? '' : 'none';
+  });
 }
 
 /* ============================================================
-   TAB 3: TIENDAS
+   TAB 3 — TIENDAS
    ============================================================ */
-function buildTiendas() {
-  // PH Bars
-  const barsEl = document.getElementById('phBars');
-  barsEl.innerHTML = PH_STORES.map((s, i) => {
-    const pct = Math.round(PH_JUN[i] / PH_PLAN[i] * 100);
-    const fill = Math.min(pct, 100);
-    const color = storeBarColor(pct);
+let tiendasView = 'jun';
+function buildTiendas() { renderTiendas(); buildTRU(); }
+
+function setTiendasView(v) {
+  tiendasView = v;
+  document.getElementById('tog-t-jun').classList.toggle('active', v==='jun');
+  document.getElementById('tog-t-may').classList.toggle('active', v==='may');
+  renderTiendas();
+}
+
+function renderTiendas() {
+  const isJun = tiendasView === 'jun';
+  const realArr = isJun ? PH_JUN : PH_MAY;
+  const planArr = isJun ? PH_PLAN_JUN_FULL.map(p=>Math.round(p*JUN_DAYS_ELAPSED/30)) : PH_PLAN_MAY;
+  const title   = isJun ? 'Palacio de Hierro — JUN MTD (7 días)' : 'Palacio de Hierro — Mayo 2026 (mes completo)';
+  document.getElementById('tiendas-title').textContent = title;
+
+  // Find max for bar scale
+  const maxReal = Math.max(...realArr, 1);
+
+  document.getElementById('phBars').innerHTML = PH_STORES.map((s,i)=>{
+    const real = realArr[i] || 0;
+    const plan = planArr[i] || 0;
+    const p    = plan > 0 ? pct(real, plan) : 0;
+    const fill = Math.min(isJun ? pct(real, maxReal) : Math.min(p, 130), 100);
+    const color= plan > 0 ? pctColor(p) : '#6b7280';
+    const pctTxt = plan > 0 ? p+'%' : '—';
     return `<div class="store-bar-item">
       <div class="store-bar-header">
         <span class="store-bar-name">${s}</span>
-        <span class="store-bar-pct" style="color:${color};">${pct}%</span>
+        <div style="text-align:right;">
+          <span class="store-bar-pct" style="color:${color};">${pctTxt}</span>
+          <div class="store-bar-real">${fmtMXN(real,0)}</div>
+        </div>
       </div>
-      <div class="store-bar-track">
-        <div class="store-bar-fill" style="width:${fill}%;background:${color};"></div>
-      </div>
+      <div class="store-bar-track"><div class="store-bar-fill" style="width:${fill}%;background:${color};"></div></div>
     </div>`;
   }).join('');
 
-  // PH Table
-  const ptbody = document.getElementById('phTableBody');
-  ptbody.innerHTML = PH_STORES.map((s, i) => {
-    const pct = Math.round(PH_JUN[i] / PH_PLAN[i] * 100);
-    const cl  = pct >= 100 ? 'green' : pct >= 80 ? 'amber' : 'red';
-    const gap = PH_JUN[i] - PH_PLAN[i];
+  document.getElementById('phTableBody').innerHTML = PH_STORES.map((s,i)=>{
+    const real = realArr[i] || 0;
+    const plan = planArr[i] || 0;
+    const p    = plan > 0 ? pct(real, plan) : null;
+    const cl   = p !== null ? badgeClass(p) : 'blue';
+    const badge= p !== null ? `<span class="badge ${cl}">${p}%</span>` : '<span class="badge blue">MTD</span>';
     return `<tr>
       <td style="font-weight:600;">${s}</td>
-      <td class="num">${fmtMXN(PH_JUN[i])}</td>
-      <td class="num" style="color:var(--text-muted);">${fmtMXN(PH_PLAN[i])}</td>
-      <td class="num"><span class="badge ${cl}">${pct}%</span></td>
+      <td class="num">${fmtMXN(real,0)}</td>
+      <td class="num" style="color:var(--text-muted);">${plan > 0 ? fmtMXN(plan,0) : '—'}</td>
+      <td class="num">${badge}</td>
     </tr>`;
   }).join('');
+}
 
-  // TRU cards
-  const truEl = document.getElementById('truCards');
-  truEl.innerHTML = `
+function buildTRU() {
+  document.getElementById('truCards').innerHTML = [
+    TRU.abr, TRU.may, TRU.jun
+  ].map(t=>`
     <div class="tru-card">
-      <div class="tc-period">${TRU.abr.periodo}</div>
-      <div class="tc-value">${fmtMXN(TRU.abr.venta)}</div>
-      <div class="tc-sub">${fmtNum(TRU.abr.piezas)} piezas · Ticket ${fmtMXN(Math.round(TRU.abr.venta/TRU.abr.piezas))}</div>
-    </div>
-    <div class="tru-card">
-      <div class="tc-period">${TRU.may.periodo}</div>
-      <div class="tc-value">${fmtMXN(TRU.may.venta)}</div>
-      <div class="tc-sub">${fmtNum(TRU.may.piezas)} piezas · Ticket ${fmtMXN(Math.round(TRU.may.venta/TRU.may.piezas))}</div>
-    </div>`;
+      <div class="tc-period">${t.periodo}</div>
+      <div class="tc-value">${fmtMXN(t.venta,0)}</div>
+      <div class="tc-sub">${fmtNum(t.piezas)} pzas · Ticket ${fmtMXN(Math.round(t.venta/t.piezas),0)}</div>
+    </div>`).join('');
 
-  // TRU Top 5
-  const t5 = document.getElementById('truTop5');
-  t5.innerHTML = TOP_SKUS.filter(s => s.tru_ytd > 0).slice(0, 5).map(s =>
-    `<tr>
+  document.getElementById('truTop5').innerHTML = TOP_SKUS
+    .filter((s,i)=>i<5)
+    .map(s=>`<tr>
       <td style="color:var(--text-muted);font-weight:700;">${s.rank}</td>
-      <td style="font-weight:600;">${s.art}</td>
-      <td class="num">${fmtMXN(s.tru_ytd)}</td>
-    </tr>`
-  ).join('');
+      <td style="font-weight:600;font-size:11px;">${s.art}</td>
+      <td class="num">${fmtMXN(s.ph_may,0)}</td>
+    </tr>`).join('');
 }
 
 /* ============================================================
-   TAB 4: KPIs
+   TAB 4 — KPIs
    ============================================================ */
 let selectedMonth = 'MAY';
-const MONTHS = ['ENE','FEB','MAR','ABR','MAY'];
+const MONTHS = ['ENE','FEB','MAR','ABR','MAY','JUN'];
 
 function buildKPIs() {
-  // Month buttons
-  const sel = document.getElementById('monthSelector');
-  sel.innerHTML = MONTHS.map(m => `
-    <button class="month-btn ${m === selectedMonth ? 'active' : ''}"
-      onclick="selectKPIMonth('${m}')">${m}</button>
+  document.getElementById('monthSelector').innerHTML = MONTHS.map(m=>`
+    <button class="month-btn ${m===selectedMonth?'active':''}" onclick="selectKPIMonth('${m}')">${m}</button>
   `).join('');
 
   renderBigMetrics();
+  renderCategories();
   renderKPITable();
 
   // SKU table
-  const skuT = document.getElementById('skuTable');
-  skuT.innerHTML = TOP_SKUS.map(s => `
+  document.getElementById('skuTable').innerHTML = TOP_SKUS.map(s=>`
     <tr>
       <td style="color:var(--text-muted);font-weight:700;">${s.rank}</td>
       <td style="font-weight:600;font-size:11px;">${s.art}</td>
-      <td class="num">${s.ph_may > 0 ? fmtMXN(s.ph_may) : '—'}</td>
-      <td class="num">${s.tru_ytd > 0 ? fmtMXN(s.tru_ytd) : '—'}</td>
-      <td class="num"><span class="badge green">${s.abc}</span></td>
-    </tr>
-  `).join('');
+      <td class="num">${fmtMXN(s.ph_may,0)}</td>
+      <td class="num">${fmtNum(s.ph_uds)}</td>
+    </tr>`).join('');
 }
 
 function selectKPIMonth(m) {
   selectedMonth = m;
-  document.querySelectorAll('.month-btn').forEach(b => {
-    b.classList.toggle('active', b.textContent === m);
-  });
+  document.querySelectorAll('.month-btn').forEach(b=>b.classList.toggle('active', b.textContent===m));
   renderBigMetrics();
+  renderCategories();
 }
 
 function renderBigMetrics() {
   const k = KPI_OP[selectedMonth];
   if (!k) return;
-  const upt  = k.trans > 0 ? (k.unid / k.trans).toFixed(1) : '—';
-  const att   = k.trans > 0 ? fmtMXN(k.venta / k.trans) : '—';
+  const upt = k.trans > 0 ? (k.unid/k.trans).toFixed(1) : '—';
+  const att = k.trans > 0 ? fmtMXN(k.venta/k.trans, 0) : '—';
   document.getElementById('bigMetrics').innerHTML = `
     <div class="big-metric">
-      <div class="bm-label">UPT</div>
+      <div class="bm-label">UPT (est)</div>
       <div class="bm-value">${upt}</div>
       <div class="bm-sub">unid/trans</div>
     </div>
     <div class="big-metric">
-      <div class="bm-label">Ticket Prom</div>
-      <div class="bm-value">${fmtMXN(k.ticket)}</div>
-      <div class="bm-sub">por transacción</div>
+      <div class="bm-label">Ticket PH</div>
+      <div class="bm-value">${fmtMXN(k.ticket,0)}</div>
+      <div class="bm-sub">por trans</div>
     </div>
     <div class="big-metric">
       <div class="bm-label">ATT</div>
       <div class="bm-value">${att}</div>
-      <div class="bm-sub">avg trans total</div>
+      <div class="bm-sub">venta/trans</div>
     </div>`;
 }
 
+function renderCategories() {
+  const c = CAT_DATA[selectedMonth];
+  if (!c) return;
+  document.getElementById('catTitle').textContent = `Categorías — ${selectedMonth} 2026 (PH · Venta Neta)`;
+  const cats = [
+    { key:'piel',    label:'🐻 Pieles',  color:'#f59e0b', cls:'cat-piel'    },
+    { key:'ropa',    label:'👕 Ropa',    color:'#8b5cf6', cls:'cat-ropa'    },
+    { key:'acc',     label:'⚡ ACC',     color:'#3b82f6', cls:'cat-acc'     },
+    { key:'relleno', label:'🫶 Relleno', color:'#10b981', cls:'cat-relleno' }
+  ];
+  document.getElementById('catGrid').innerHTML = cats.map(cat=>{
+    const d   = c[cat.key];
+    const pv  = c.totalV > 0 ? (d.v/c.totalV*100).toFixed(1) : 0;
+    const pu  = c.totalU > 0 ? (d.u/c.totalU*100).toFixed(1) : 0;
+    return `<div class="cat-card" style="border-left:3px solid ${cat.color};">
+      <div class="cc-label" style="color:${cat.color};">${cat.label}</div>
+      <div class="cc-units">${fmtNum(d.u)} <span style="font-size:11px;font-weight:400;color:var(--text-muted);">uds</span></div>
+      <div class="cc-venta">${fmtMXN(d.v,0)}</div>
+      <div class="cc-pct" style="color:${cat.color};">${pv}% ventas · ${pu}% uds</div>
+      <div class="cat-bar ${cat.cls}" style="width:${pv}%;"></div>
+    </div>`;
+  }).join('');
+}
+
 function renderKPITable() {
-  const tbody = document.getElementById('kpiTableBody');
-  tbody.innerHTML = MONTHS.map(m => {
-    const k = KPI_OP[m];
-    if (!k) return '';
-    const upt = k.trans > 0 ? (k.unid / k.trans).toFixed(1) : '—';
-    const att  = k.trans > 0 ? fmtMXN(k.venta / k.trans) : '—';
-    const cl   = k.cumpl >= 100 ? 'green' : k.cumpl >= 85 ? 'amber' : 'red';
-    const bold = m === selectedMonth ? 'font-weight:700;background:#fffbeb;' : '';
+  document.getElementById('kpiTableBody').innerHTML = MONTHS.map(m=>{
+    const k = KPI_OP[m]; if(!k) return '';
+    const upt = k.trans > 0 ? (k.unid/k.trans).toFixed(1) : '—';
+    const bold= m===selectedMonth ? 'font-weight:700;background:#fffbeb;' : '';
     return `<tr style="${bold}">
       <td style="font-weight:700;">${m}</td>
-      <td class="num">${fmtNum(k.trans)}</td>
+      <td class="num">${fmtNum(k.unid)}</td>
       <td class="num">${upt}</td>
-      <td class="num">${fmtMXN(k.ticket)}</td>
-      <td class="num">${att}</td>
-      <td class="num"><span class="badge ${cl}">${k.cumpl}%</span></td>
+      <td class="num">${fmtMXN(k.ticket,0)}</td>
+      <td class="num">${fmtMXN(k.venta,1)}</td>
+      <td class="num"><span class="badge ${badgeClass(k.cumpl)}">${k.cumpl}%</span></td>
     </tr>`;
   }).join('');
 }
 
 /* ============================================================
-   TAB 5: ALERTAS
+   TAB 5 — ALERTAS
    ============================================================ */
 function buildAlertas() {
-  const counts = { critica: 0, advertencia: 0, info: 0 };
-  ALERTS.forEach(a => counts[a.lvl]++);
+  const counts = {critica:0, advertencia:0, info:0};
+  ALERTS.forEach(a=>counts[a.lvl]++);
 
-  const bar = document.getElementById('alertCountBar');
-  bar.innerHTML = `
-    <span class="alert-count-chip critica">🔴 ${counts.critica} crítica${counts.critica !== 1 ? 's' : ''}</span>
-    <span class="alert-count-chip advertencia">🟡 ${counts.advertencia} advertencia${counts.advertencia !== 1 ? 's' : ''}</span>
-    <span class="alert-count-chip info">🔵 ${counts.info} info</span>
-  `;
+  document.getElementById('alertCountBar').innerHTML = `
+    <span class="alert-count-chip critica">🔴 ${counts.critica} crítica${counts.critica!==1?'s':''}</span>
+    <span class="alert-count-chip advertencia">🟡 ${counts.advertencia} advertencia${counts.advertencia!==1?'s':''}</span>
+    <span class="alert-count-chip info">🔵 ${counts.info} info</span>`;
 
-  const list = document.getElementById('alertsList');
-  list.innerHTML = ALERTS.map(a => `
+  document.getElementById('alertsList').innerHTML = ALERTS.map(a=>`
     <div class="alert-item">
       <div class="alert-border-left ${a.lvl}">
         <div class="alert-title">${a.title}</div>
         <div class="alert-desc">${a.desc}</div>
       </div>
-    </div>
-  `).join('');
-}
-
-/* ============================================================
-   CHART DEFAULTS
-   ============================================================ */
-function chartDefaults({ stacked = false, yTick, maxH = 220 } = {}) {
-  return {
-    responsive: true,
-    maintainAspectRatio: true,
-    aspectRatio: 1.9,
-    animation: { duration: 400 },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1f2937',
-        titleColor: '#f9fafb',
-        bodyColor: '#d1d5db',
-        cornerRadius: 8,
-        padding: 10,
-        callbacks: {
-          label: ctx => ' ' + fmtMXN(ctx.raw)
-        }
-      }
-    },
-    scales: {
-      x: {
-        stacked,
-        grid: { display: false },
-        ticks: { color: '#9ca3af', font: { size: 10 }, maxRotation: 0 }
-      },
-      y: {
-        stacked,
-        grid: { color: '#f3f4f6' },
-        ticks: {
-          color: '#9ca3af',
-          font: { size: 10 },
-          callback: yTick || (v => v)
-        }
-      }
-    }
-  };
+    </div>`).join('');
 }
 
 /* ============================================================
    TAB SWITCHING
    ============================================================ */
-const TABS = ['inicio','ventas','tiendas','kpis','alertas'];
 const built = {};
-
 function switchTab(tab) {
-  // Update panels
-  document.querySelectorAll('.tab-panel').forEach(p => {
-    p.classList.toggle('active', p.id === 'tab-' + tab);
-  });
-  // Update nav
-  document.querySelectorAll('.nav-item').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === tab);
-  });
-  // Scroll to top
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+tab));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   document.getElementById('content').scrollTop = 0;
-  // Build if first time
   if (!built[tab]) {
     built[tab] = true;
-    switch(tab) {
-      case 'inicio':   buildInicio();   break;
-      case 'ventas':   buildVentas();   break;
-      case 'tiendas':  buildTiendas();  break;
-      case 'kpis':     buildKPIs();     break;
-      case 'alertas':  buildAlertas();  break;
-    }
+    ({ inicio:buildInicio, ventas:buildVentas, tiendas:buildTiendas, kpis:buildKPIs, alertas:buildAlertas })[tab]?.();
   }
+}
+
+/* ============================================================
+   GOOGLE SHEETS SYNC (opcional)
+   ============================================================ */
+const SHEETS_CONFIG = {
+  enabled: false,
+  baseUrl: 'https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/gviz/tq?tqx=out:csv&sheet='
+};
+
+async function syncData() {
+  if (!SHEETS_CONFIG.enabled) { showToast('📡 Datos locales al 4 Jun 2026'); return; }
+  showToast('🔄 Sincronizando...');
+}
+
+function updateSyncChip(ok) {
+  const chip = document.getElementById('syncChip');
+  chip.className = ok ? 'sync-chip ok' : 'sync-chip off';
+  chip.textContent = ok ? '✓ En línea' : 'Local';
 }
 
 /* ============================================================
@@ -1535,41 +1020,22 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
 }
 
 /* ============================================================
-   REBUILD ALL (after sheets sync)
-   ============================================================ */
-function rebuildAll() {
-  Object.keys(built).forEach(k => delete built[k]);
-  built['inicio'] = true;
-  buildInicio();
-  // Rebuild current visible tab
-  const active = document.querySelector('.tab-panel.active');
-  if (active) {
-    const id = active.id.replace('tab-', '');
-    if (id !== 'inicio') {
-      built[id] = true;
-      switch(id) {
-        case 'ventas':  buildVentas();  break;
-        case 'tiendas': buildTiendas(); break;
-        case 'kpis':    buildKPIs();    break;
-        case 'alertas': buildAlertas(); break;
-      }
-    }
-  }
-}
-
-/* ============================================================
-   SERVICE WORKER REGISTRATION
+   SERVICE WORKER
    ============================================================ */
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  });
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 
 /* ============================================================
    INIT
-   =================================================
+   ============================================================ */
+built['inicio'] = true;
+buildInicio();
+hydrateCurApp();
+</script>
+</body>
+</html>
